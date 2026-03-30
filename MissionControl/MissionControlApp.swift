@@ -12,6 +12,7 @@ struct MissionControlApp: App {
     }
 }
 
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: FloatingPanel!
     private var store = AgentStore()

@@ -1,0 +1,24 @@
+name: MissionControl
+options:
+  bundleIdPrefix: com.missioncontrol
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "16.0"
+  minimumXcodeGenVersion: "2.0"
+
+targets:
+  MissionControl:
+    type: application
+    platform: macOS
+    sources:
+      - MissionControl
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.missioncontrol.app
+        PRODUCT_NAME: MissionControl
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        SWIFT_VERSION: "5.9"
+        INFOPLIST_KEY_LSUIElement: true
+        GENERATE_INFOPLIST_FILE: true
+        INFOPLIST_KEY_NSMainStoryboardFile: ""
+        INFOPLIST_KEY_CFBundleDisplayName: "Mission Control"
