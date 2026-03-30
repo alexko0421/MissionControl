@@ -8,7 +8,7 @@ import Combine
 
 @MainActor
 class AgentStore: ObservableObject {
-    @Published var agents: [Agent] = Agent.samples
+    @Published var agents: [Agent] = []
 
     enum ViewState {
         case terminal
