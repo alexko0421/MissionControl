@@ -118,12 +118,12 @@ struct CapsuleBar: View {
                         Capsule().stroke(Color.white.opacity(0.1), lineWidth: 0.5)
                     )
 
-                    // Task text
-                    Text(agent.task)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .lineLimit(1)
-                        .animation(.spring(response: 0.55, dampingFraction: 0.9), value: agent.task)
+                    // Task text — or "safe to focus" signal when no agent needs you
+                    SafeToFocusOrTask(
+                        task: agent.task,
+                        blockedCount: store.blockedCount,
+                        hasAgents: !store.agents.isEmpty
+                    )
                     
                     Spacer(minLength: 0)
                 } else {
@@ -181,6 +181,37 @@ struct CapsuleBar: View {
             }
         }
         .environment(\.colorScheme, .dark)
+    }
+}
+
+// MARK: - Safe to Focus Signal
+
+struct SafeToFocusOrTask: View {
+    let task: String
+    let blockedCount: Int
+    let hasAgents: Bool
+
+    private let safeColor = Color(red: 0.365, green: 0.792, blue: 0.647)
+
+    var body: some View {
+        Group {
+            if blockedCount == 0 && hasAgents {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(safeColor)
+                    Text("安心工作")
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(safeColor.opacity(0.9))
+                }
+            } else {
+                Text(task)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .lineLimit(1)
+            }
+        }
+        .animation(.spring(response: 0.55, dampingFraction: 0.9), value: blockedCount)
     }
 }
 
