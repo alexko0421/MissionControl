@@ -68,11 +68,42 @@ class AgentStore: ObservableObject {
         stopPolling()
     }
 
+    private var scanCounter = 0
+
     private func startPolling() {
         pollingTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
+                // Run external scanners every ~15 seconds (every 5th poll)
+                self?.scanCounter += 1
+                if self?.scanCounter ?? 0 >= 5 {
+                    self?.scanCounter = 0
+                    self?.runExternalScanners()
+                }
                 self?.loadFromFile()
                 self?.pollTerminals()
+            }
+        }
+    }
+
+    private func runExternalScanners() {
+        let scanners = [
+            "mc-antigravity-scanner.py",
+            "mc-codex-scanner.py",
+        ]
+        let scriptsDir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/MissionControl/scripts")
+
+        for scanner in scanners {
+            let scriptPath = scriptsDir.appendingPathComponent(scanner).path
+            guard FileManager.default.fileExists(atPath: scriptPath) else { continue }
+            Task.detached {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+                process.arguments = [scriptPath]
+                process.standardOutput = FileHandle.nullDevice
+                process.standardError = FileHandle.nullDevice
+                try? process.run()
+                process.waitUntilExit()
             }
         }
     }

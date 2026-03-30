@@ -32,4 +32,12 @@ class FloatingPanel: NSPanel {
 
     // Allow the panel to become key (for interactions) even as a non-activating panel
     override var canBecomeKey: Bool { true }
+
+    // Accept first mouse click — no need to focus first
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .leftMouseDown {
+            makeKeyAndOrderFront(nil)
+        }
+        super.sendEvent(event)
+    }
 }

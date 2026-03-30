@@ -164,6 +164,12 @@ struct CapsuleBar: View {
             .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
             .alertPulse(isActive: store.activeAlert != nil)
             .animation(.spring(response: 0.55, dampingFraction: 0.9), value: store.priorityAgent?.id)
+            .contentShape(Capsule())
+            .onTapGesture {
+                if let agent = store.priorityAgent {
+                    jumpToPriorityAgent(agent: agent)
+                }
+            }
         }
         .padding(.horizontal, 12)
         .padding(.top, 12)
@@ -181,6 +187,18 @@ struct CapsuleBar: View {
             }
         }
         .environment(\.colorScheme, .dark)
+    }
+
+    private func jumpToPriorityAgent(agent: Agent) {
+        let appName = agent.app ?? "Terminal"
+        let workspace = NSWorkspace.shared
+        if let app = workspace.runningApplications.first(where: {
+            $0.localizedName == appName || $0.bundleIdentifier?.localizedCaseInsensitiveContains(appName.lowercased()) == true
+        }) {
+            app.activate()
+        } else {
+            workspace.open(URL(fileURLWithPath: "/Applications/\(appName).app"))
+        }
     }
 }
 
