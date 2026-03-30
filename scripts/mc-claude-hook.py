@@ -68,8 +68,19 @@ def guess_status(message):
     """Simple heuristic for agent status based on message content."""
     msg = message.lower()
     # Blocked signals: asking questions, waiting for input
-    blocked_signals = ["which option", "你想", "你觉得", "边个", "do you want", "should i",
-                       "please choose", "waiting for", "need your", "要你决定", "需要你"]
+    blocked_signals = [
+        # English
+        "which option", "do you want", "should i", "please choose", "waiting for",
+        "need your", "what do you think", "let me know", "your choice", "pick one",
+        "would you like", "want me to", "prefer", "choose between",
+        # Simplified Chinese
+        "你想", "你觉得", "要你决定", "需要你", "你的意见", "请选择",
+        "你选", "你希望", "你认为", "请确认",
+    ]
+    # Question mark at end of message is a strong signal
+    last_line = message.strip().split("\n")[-1].strip() if message.strip() else ""
+    if last_line.endswith("?") or last_line.endswith("？"):
+        return "blocked"
     for signal in blocked_signals:
         if signal in msg:
             return "blocked"
@@ -90,18 +101,21 @@ def summarize_with_gemini(message, project_name):
     msg = message[:3000] if len(message) > 3000 else message
 
     prompt = (
-        "你係 Mission Control 嘅摘要引擎。你嘅工作係將 AI coding agent 嘅原始輸出提煉成簡潔嘅工作摘要。\n\n"
-        "規則：\n"
-        "- 用書面繁體中文，唔好用口語\n"
-        "- task: 一句話講而家做緊咩（最多20字），例如「實現全局快捷鍵切換面板」\n"
-        "- summary: 2-3句講做咗咩、進度到邊（最多100字）\n"
-        "- nextAction: 下一步要做咩（最多50字）\n"
-        "- status: running(進行中) / blocked(等待用戶決定) / done(已完成)\n"
-        "- 唔好重複原文，要提煉重點\n"
-        "- 唔好提及檔案名，講功能\n\n"
+        "你是 Mission Control 的摘要引擎。你的工作是将 AI coding agent 的原始输出提炼成简洁的工作摘要。\n\n"
+        "规则：\n"
+        "- 用简体中文书面语\n"
+        "- task: 一句话讲当前在做什么（最多20字），例如「实现全局快捷键切换面板」\n"
+        "- summary: 2-3句讲做了什么、进度到哪（最多100字）\n"
+        "- nextAction: 下一步要做什么（最多50字）\n"
+        "- status 判断规则（非常重要）：\n"
+        "  - blocked: 消息结尾有问号、或要求用户做选择/决定/确认\n"
+        "  - done: 明确说「完成」「done」且没有后续问题\n"
+        "  - running: 其他所有情况（正在工作、刚做完但还有下一步）\n"
+        "- 不要重复原文，要提炼重点\n"
+        "- 不要提及文件名，讲功能\n\n"
         f"Project: {project_name}\n"
-        f"AI Agent 原始輸出：\n{msg}\n\n"
-        "用 JSON 回覆，不要加 markdown code block。\n"
+        f"AI Agent 原始输出：\n{msg}\n\n"
+        "用 JSON 回复，不要加 markdown code block。\n"
         '格式：{"status":"...","task":"...","summary":"...","nextAction":"..."}\n'
     )
     body = json.dumps({
