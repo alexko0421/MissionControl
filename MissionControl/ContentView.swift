@@ -103,6 +103,11 @@ struct CapsuleBar: View {
                             .font(.system(size: 12, weight: .semibold, design: .rounded))
                             .foregroundStyle(.white)
                             .lineLimit(1)
+                        if store.isFocusModeActive && store.focusedAgentId == agent.id {
+                            Image(systemName: "scope")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.white.opacity(0.7))
+                        }
                     }
                     .padding(.leading, 8)
                     .padding(.trailing, 10)
@@ -168,6 +173,11 @@ struct CapsuleBar: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
                     store.dismissAlert()
                 }
+            }
+        }
+        .onTapGesture {
+            if store.isFocusModeActive {
+                store.stopFocus()
             }
         }
         .environment(\.colorScheme, .dark)
@@ -254,6 +264,7 @@ struct SessionListPanel: View {
 
 struct SessionRow: View {
     let agent: Agent
+    @EnvironmentObject var store: AgentStore
     @State private var isHovered = false
 
     var body: some View {
@@ -282,6 +293,12 @@ struct SessionRow: View {
                 .frame(minWidth: 44)
                 .background(agent.status.color.opacity(0.15), in: Capsule())
 
+            if store.isFocusModeActive && store.focusedAgentId == agent.id {
+                Image(systemName: "scope")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color(red: 0.365, green: 0.792, blue: 0.647))
+            }
+
             Text(agent.timeAgo)
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.4))
@@ -296,6 +313,9 @@ struct SessionRow: View {
         .scaleEffect(isHovered ? 1.01 : 1.0)
         .animation(.spring(response: 0.4, dampingFraction: 0.9), value: isHovered)
         .onHover { isHovered = $0 }
+        .onLongPressGesture(minimumDuration: 0.5) {
+            store.startFocus(agentId: agent.id)
+        }
         .contentShape(Rectangle())
     }
 }
