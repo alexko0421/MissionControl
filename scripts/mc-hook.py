@@ -115,7 +115,11 @@ def get_git_info(project_root):
     diff_snippet = run(f"git -C '{project_root}' diff HEAD -U2 2>/dev/null | head -80") or ""
     staged_snippet = run(f"git -C '{project_root}' diff --cached -U2 2>/dev/null | head -40") or ""
     untracked = run(f"git -C '{project_root}' ls-files --others --exclude-standard 2>/dev/null | head -5") or ""
-    recent_files = run(f"find '{project_root}' -not -path '*/.git/*' -not -path '*/node_modules/*' -not -path '*/build/*' -type f -mmin -10 2>/dev/null | head -10") or ""
+    # Only show git-tracked files modified in last 10 min — automatically excludes all junk
+    recent_files = run(f"git -C '{project_root}' diff --name-only --diff-filter=M HEAD@{{10.minutes.ago}} 2>/dev/null | head -10") or ""
+    if not recent_files:
+        # Fallback: recently committed files
+        recent_files = run(f"git -C '{project_root}' log --since='10 minutes ago' --name-only --format='' 2>/dev/null | sort -u | head -10") or ""
     remote = run(f"git -C '{project_root}' remote get-url origin 2>/dev/null") or ""
     last_msg = run(f"git -C '{project_root}' log -1 --format='%s' 2>/dev/null") or ""
 
