@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import AppKit
 
 // MARK: - AgentStore
 // Central data store. Reads from ~/.mission-control/status.json
@@ -18,6 +19,22 @@ class AgentStore: ObservableObject {
     }
 
     @Published var viewState: ViewState = .terminal
+
+    // Alert state — drives pill flash + sound
+    @Published var activeAlert: AgentAlert? = nil
+
+    struct AgentAlert: Equatable {
+        let agentId: String
+        let agentName: String
+        let newStatus: AgentStatus
+        let task: String
+    }
+
+    // Track previous agent statuses for diff
+    private var previousStatuses: [String: AgentStatus] = [:]
+
+    // Debounce: don't re-alert same agent within 5 seconds
+    private var lastAlertTimes: [String: Date] = [:]
 
     private let statusDir  = FileManager.default.homeDirectoryForCurrentUser
                                 .appendingPathComponent(".mission-control")
@@ -50,6 +67,36 @@ class AgentStore: ObservableObject {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let loaded = try decoder.decode([Agent].self, from: data)
+
+            // Detect status changes before updating agents
+            let now = Date()
+            for agent in loaded {
+                let oldStatus = previousStatuses[agent.id]
+                let isNewBlockedOrDone = (agent.status == .blocked || agent.status == .done)
+                let statusChanged = (oldStatus != nil && oldStatus != agent.status)
+                let isFirstAppearanceBlocked = (oldStatus == nil && agent.status == .blocked)
+
+                if (statusChanged || isFirstAppearanceBlocked) && isNewBlockedOrDone {
+                    // Debounce check: skip if alerted within last 5 seconds
+                    if let lastAlert = lastAlertTimes[agent.id],
+                       now.timeIntervalSince(lastAlert) < 5 {
+                        continue
+                    }
+                    lastAlertTimes[agent.id] = now
+                    activeAlert = AgentAlert(
+                        agentId: agent.id,
+                        agentName: agent.name,
+                        newStatus: agent.status,
+                        task: agent.task
+                    )
+                    // Play alert sound
+                    NSSound(named: "Ping")?.play()
+                }
+            }
+
+            // Update previous statuses
+            previousStatuses = Dictionary(uniqueKeysWithValues: loaded.map { ($0.id, $0.status) })
+
             withAnimation(.easeInOut(duration: 0.2)) {
                 self.agents = loaded
             }
@@ -182,6 +229,12 @@ class AgentStore: ObservableObject {
         case .sessionList: return "sessionList"
         case .summary(let id): return "summary-\(id)"
         case .settings: return "settings"
+        }
+    }
+
+    func dismissAlert() {
+        withAnimation(.easeOut(duration: 0.3)) {
+            activeAlert = nil
         }
     }
 }
