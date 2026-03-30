@@ -69,14 +69,14 @@ class AgentStore: ObservableObject {
         try? data.write(to: statusFile)
     }
 
-    // Watch for file changes using DispatchSource
+    // Watch the directory for changes (handles atomic writes and missing file)
     private func startFileWatcher() {
-        guard FileManager.default.fileExists(atPath: statusFile.path) else { return }
-        let fd = open(statusFile.path, O_EVTONLY)
+        let dirPath = statusDir.path
+        let fd = open(dirPath, O_EVTONLY)
         guard fd >= 0 else { return }
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd,
-            eventMask: .write,
+            eventMask: [.write, .rename],
             queue: DispatchQueue.main
         )
         source.setEventHandler { [weak self] in self?.loadFromFile() }
@@ -95,13 +95,23 @@ class AgentStore: ObservableObject {
     }
 
     private func pollTmuxAgents() {
-        for i in agents.indices {
-            guard agents[i].status == .running,
-                  let target = agents[i].tmuxTarget else { continue }
-            let lines = TMuxBridge.capturePane(target: target, lastLines: 30)
-            if !lines.isEmpty {
-                agents[i].terminalLines = lines
-                agents[i].updatedAt = Date()
+        let targets = agents.enumerated().compactMap { (i, a) -> (Int, String)? in
+            guard a.status == .running, let target = a.tmuxTarget else { return nil }
+            return (i, target)
+        }
+        guard !targets.isEmpty else { return }
+        Task.detached {
+            var results: [(Int, [TerminalLine])] = []
+            for (i, target) in targets {
+                let lines = TMuxBridge.capturePane(target: target, lastLines: 30)
+                if !lines.isEmpty { results.append((i, lines)) }
+            }
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                for (i, lines) in results where i < self.agents.count {
+                    self.agents[i].terminalLines = lines
+                    self.agents[i].updatedAt = Date()
+                }
             }
         }
     }
@@ -110,12 +120,13 @@ class AgentStore: ObservableObject {
 
     func sendCommand(_ text: String, to agent: Agent) {
         guard let target = agent.tmuxTarget else {
-            // No tmux target — append to log only
             appendUserMessage(text, agentId: agent.id)
             return
         }
-        TMuxBridge.sendKeys(target: target, command: text)
         appendUserMessage(text, agentId: agent.id)
+        Task.detached {
+            TMuxBridge.sendKeys(target: target, command: text)
+        }
     }
 
     private func appendUserMessage(_ text: String, agentId: String) {
