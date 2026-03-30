@@ -2,9 +2,6 @@
 # mc-update.sh — call this from your Claude Code sessions to update Mission Control
 # Usage: mc-update.sh <agent-id> <status> <task> <summary> <next-action> [tmux-session] [tmux-window] [tmux-pane]
 #
-# Example:
-#   mc-update.sh "asami-voice" "running" "重構 session handler" "完成了X" "下一步做Y" "conductor" 0 0
-#
 # Status values: running | blocked | done | idle
 
 STATUS_DIR="$HOME/.mission-control"
@@ -19,43 +16,53 @@ NEXT="${5:-}"
 TMUX_SESSION="${6:-}"
 TMUX_WINDOW="${7:-0}"
 TMUX_PANE="${8:-0}"
-NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-# Read existing entries (excluding this agent)
-EXISTING="[]"
-if [ -f "$STATUS_FILE" ]; then
-    EXISTING=$(python3 -c "
-import json, sys
-try:
-    data = json.load(open('$STATUS_FILE'))
-    filtered = [a for a in data if a.get('id') != '$ID']
-    print(json.dumps(filtered))
-except:
-    print('[]')
-")
-fi
+python3 - "$ID" "$STATUS" "$TASK" "$SUMMARY" "$NEXT" "$TMUX_SESSION" "$TMUX_WINDOW" "$TMUX_PANE" "$STATUS_FILE" << 'PYEOF'
+import json, sys, os
+from datetime import datetime, timezone
 
-# Build new entry
-NEW_ENTRY=$(python3 -c "
-import json
-entry = {
-    'id': '$ID',
-    'name': '$ID',
-    'status': '$STATUS',
-    'task': '$TASK',
-    'summary': '$SUMMARY',
-    'terminalLines': [],
-    'nextAction': '$NEXT',
-    'updatedAt': '$NOW',
-    'worktree': '$ID',
-    'tmuxSession': '$TMUX_SESSION' if '$TMUX_SESSION' else None,
-    'tmuxWindow': int('$TMUX_WINDOW'),
-    'tmuxPane': int('$TMUX_PANE'),
-}
-existing = json.loads('$EXISTING'.replace(\"'\", '\"') if False else '''$EXISTING''')
-existing.append(entry)
-print(json.dumps(existing, ensure_ascii=False, indent=2))
-")
+agent_id = sys.argv[1]
+status = sys.argv[2]
+task = sys.argv[3]
+summary = sys.argv[4]
+next_action = sys.argv[5]
+tmux_session = sys.argv[6] if sys.argv[6] else None
+tmux_window = int(sys.argv[7])
+tmux_pane = int(sys.argv[8])
+status_file = sys.argv[9]
 
-echo "$NEW_ENTRY" > "$STATUS_FILE"
-echo "✓ Mission Control updated: $ID → $STATUS"
+now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+# Load existing agents
+agents = []
+if os.path.exists(status_file):
+    try:
+        with open(status_file) as f:
+            agents = json.load(f)
+    except (json.JSONDecodeError, IOError):
+        agents = []
+
+# Remove existing entry for this agent
+agents = [a for a in agents if a.get("id") != agent_id]
+
+# Add new entry
+agents.append({
+    "id": agent_id,
+    "name": agent_id,
+    "status": status,
+    "task": task,
+    "summary": summary,
+    "terminalLines": [],
+    "nextAction": next_action,
+    "updatedAt": now,
+    "worktree": agent_id,
+    "tmuxSession": tmux_session,
+    "tmuxWindow": tmux_window,
+    "tmuxPane": tmux_pane,
+})
+
+with open(status_file, "w") as f:
+    json.dump(agents, f, ensure_ascii=False, indent=2)
+
+print(f"✓ Mission Control updated: {agent_id} → {status}")
+PYEOF
