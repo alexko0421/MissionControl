@@ -88,6 +88,26 @@ class AgentStore: ObservableObject {
         }
     }
 
+    private func cleanupStaleAgents() {
+        let now = Date()
+        let viewingAgentId: String? = {
+            if case .summary(let id) = viewState { return id }
+            return nil
+        }()
+
+        agents.removeAll { agent in
+            // Don't remove agent user is currently viewing
+            if agent.id == viewingAgentId { return false }
+
+            let age = now.timeIntervalSince(agent.updatedAt)
+            switch agent.status {
+            case .done:  return age > 3600      // 1 hour
+            case .idle:  return age > 86400     // 24 hours
+            default:     return false
+            }
+        }
+    }
+
     // MARK: - Status File
 
     private func createStatusDirIfNeeded() {
@@ -134,6 +154,7 @@ class AgentStore: ObservableObject {
             withAnimation(.easeInOut(duration: 0.2)) {
                 self.agents = loaded
             }
+            cleanupStaleAgents()
         } catch {
             print("AgentStore: failed to load status.json — \(error)")
         }
