@@ -1,82 +1,82 @@
 # Mission Control
 
-macOS 浮动监控面板，实时追踪多个 AI coding session 的状态。
+A macOS floating dashboard that monitors multiple AI coding sessions in real time.
 
-支持 **Claude Code**（Terminal / Conductor）、**Antigravity**、**Codex** 等 app。
+Supports **Claude Code** (Terminal / Conductor), **Antigravity**, **Codex**, and more.
 
-## 功能
+## Features
 
-- 实时显示所有 AI session 的状态（进行中 / 需要你 / 已完成 / 闲置）
-- 点击 capsule bar 或 session 详情直接跳转到对应 app
-- 浮动在所有桌面空间，随时可见
-- 当 session 需要你操作时，橙色边框闪烁提醒 + 声音提示
-- 支持 Focus Mode：锁定关注单个 session
+- Real-time status tracking for all AI sessions (Running / Needs You / Done / Idle)
+- Click the capsule bar or session detail to jump directly to the corresponding app
+- Floats across all desktop spaces — always visible
+- Orange border pulse + sound alert when a session needs your attention
+- Focus Mode: lock onto a single session and silence other alerts
 
-## 架构
+## Architecture
 
-Mission Control 本身**不是 agent**，而是一个**指挥台**：
+Mission Control is **not an agent** — it's a **command center**:
 
 ```
-┌─────────────────────────────────┐
-│     Mission Control (监控面板)     │
-│  读取 ~/.mission-control/status.json │
-└──────────┬──────────────────────┘
-           │ 读取状态
-     ┌─────┼─────────┬────────────┐
-     ▼     ▼         ▼            ▼
+┌──────────────────────────────────────┐
+│     Mission Control (Dashboard)       │
+│  Reads ~/.mission-control/status.json │
+└──────────┬───────────────────────────┘
+           │ reads status
+     ┌─────┼──────────┬────────────┐
+     ▼     ▼          ▼            ▼
  Terminal  Conductor  Antigravity  Codex
- (Hooks)   (Hooks)   (Log扫描)   (DB扫描)
+ (Hooks)   (Hooks)   (Log scan)  (DB scan)
 ```
 
-## 文件结构
+## File Structure
 
 ```
 MissionControl/
-├── MissionControlApp.swift   — App 入口
-├── Models.swift              — 数据模型（Agent, AgentStatus, TerminalLine）
-├── AgentStore.swift          — 数据中心：文件监听、轮询、外部扫描器
-├── FloatingPanel.swift       — 浮动窗口配置
-├── ContentView.swift         — UI：Capsule Bar、Session List、Summary、Settings
-├── SharedComponents.swift    — 共用组件（StatusDot、AlertPulse）
-├── SettingsView.swift        — 设置页
-└── TMuxBridge.swift          — tmux CLI 封装
+├── MissionControlApp.swift   — App entry point
+├── Models.swift              — Data models (Agent, AgentStatus, TerminalLine)
+├── AgentStore.swift          — Data store: file watching, polling, external scanners
+├── FloatingPanel.swift       — Floating window configuration
+├── ContentView.swift         — UI: Capsule Bar, Session List, Summary, Settings
+├── SharedComponents.swift    — Shared components (StatusDot, AlertPulse)
+├── SettingsView.swift        — Settings panel
+└── TMuxBridge.swift          — tmux CLI wrapper
 
 scripts/
-├── mc-claude-hook.py         — Claude Code Stop hook（Gemini 摘要）
+├── mc-claude-hook.py         — Claude Code Stop hook (Gemini summarization)
 ├── mc-prompt-hook.py         — Claude Code UserPromptSubmit hook
-├── mc-pretool-hook.py        — Claude Code PreToolUse hook（检测等待审批）
+├── mc-pretool-hook.py        — Claude Code PreToolUse hook (detects approval wait)
 ├── mc-posttool-hook.py       — Claude Code PostToolUse hook
-├── mc-antigravity-scanner.py — Antigravity log 扫描器
-└── mc-codex-scanner.py       — Codex SQLite 扫描器
+├── mc-antigravity-scanner.py — Antigravity log scanner
+└── mc-codex-scanner.py       — Codex SQLite scanner
 ```
 
-## 状态追踪机制
+## Status Tracking
 
-### Claude Code（Terminal / Conductor）
+### Claude Code (Terminal / Conductor)
 
-通过 `~/.claude/settings.json` 配置 hooks：
+Configured via hooks in `~/.claude/settings.json`:
 
-| Hook | 触发时机 | 设置状态 |
-|------|---------|---------|
-| `UserPromptSubmit` | 用户发送消息 | → `running` |
-| `PreToolUse` | Claude 要用工具（可能等待审批）| → `blocked` |
-| `PostToolUse` | 工具执行完毕 | → `running` |
-| `Stop` | Claude 回复完成 | → Gemini 判断 |
+| Hook | Trigger | Sets Status |
+|------|---------|-------------|
+| `UserPromptSubmit` | User sends a message | → `running` |
+| `PreToolUse` | Claude wants to use a tool (may need approval) | → `blocked` |
+| `PostToolUse` | Tool execution complete | → `running` |
+| `Stop` | Claude finishes responding | → Gemini decides |
 
 ### Antigravity
 
-每 15 秒扫描 `~/Library/Application Support/Antigravity/logs/` 的 agent log，推断状态。
+Scans `~/Library/Application Support/Antigravity/logs/` every 15 seconds to infer agent status.
 
 ### Codex
 
-每 15 秒读取 `~/.codex/state_5.sqlite` 的 threads 表，获取 session 状态。
+Reads `~/.codex/state_5.sqlite` threads table every 15 seconds to get session status.
 
-## 状态文件
+## Status File
 
-所有状态汇总到 `~/.mission-control/status.json`，App 每 3 秒轮询读取（仅在数据变化时更新 UI）。
+All statuses are aggregated into `~/.mission-control/status.json`. The app polls every 3 seconds, updating the UI only when data changes.
 
 ## Setup
 
-1. 用 Xcode 打开 `MissionControl.xcodeproj`
+1. Open `MissionControl.xcodeproj` in Xcode
 2. Build & Run
-3. 确保 `~/.claude/settings.json` 中配置了 hooks（参考 `scripts/` 目录）
+3. Configure hooks in `~/.claude/settings.json` (see `scripts/` directory)
