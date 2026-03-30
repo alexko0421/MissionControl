@@ -23,6 +23,9 @@ class FloatingPanel: NSPanel {
         hidesOnDeactivate = false
         isMovableByWindowBackground = true
 
+        // Appear on ALL desktop spaces
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+
         // Allow resizing via SwiftUI content
         isMovable = true
     }

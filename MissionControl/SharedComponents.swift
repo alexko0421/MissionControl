@@ -50,22 +50,38 @@ struct AlertPulseModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .overlay(
-                RoundedRectangle(cornerRadius: 100)
-                    .stroke(Color(red: 0.937, green: 0.624, blue: 0.153), lineWidth: pulse ? 2 : 0)
-                    .opacity(pulse ? 0.8 : 0)
-                    .scaleEffect(pulse ? 1.05 : 1.0)
-                    .animation(
-                        isActive ? .easeInOut(duration: 0.5).repeatCount(6, autoreverses: true) : .default,
-                        value: pulse
-                    )
+                Capsule()
+                    .stroke(Color(red: 0.937, green: 0.624, blue: 0.153), lineWidth: 2)
+                    .opacity(pulse ? 0.85 : 0)
+                    .padding(-1)
             )
             .onChange(of: isActive) { newValue in
                 if newValue {
-                    pulse = true
+                    // Simple repeating flash: on/off
+                    startFlashing()
                 } else {
                     pulse = false
                 }
             }
+    }
+
+    private func startFlashing() {
+        var count = 0
+        func flash() {
+            guard count < 8 else {
+                withAnimation(.easeOut(duration: 0.2)) { pulse = false }
+                return
+            }
+            let isOn = count % 2 == 0
+            withAnimation(.easeInOut(duration: 0.35)) {
+                pulse = isOn
+            }
+            count += 1
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                flash()
+            }
+        }
+        flash()
     }
 }
 

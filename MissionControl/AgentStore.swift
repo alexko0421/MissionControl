@@ -51,6 +51,7 @@ class AgentStore: ObservableObject {
     private var statusFile: URL { statusDir.appendingPathComponent("status.json") }
     private var fileSource: DispatchSourceFileSystemObject?
     private var pollingTimer: Timer?
+    private var lastFileData: Data?
 
     // MARK: - Lifecycle
 
@@ -68,8 +69,9 @@ class AgentStore: ObservableObject {
     }
 
     private func startPolling() {
-        pollingTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+        pollingTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
+                self?.loadFromFile()
                 self?.pollTerminals()
             }
         }
@@ -128,6 +130,9 @@ class AgentStore: ObservableObject {
         guard FileManager.default.fileExists(atPath: statusFile.path) else { return }
         do {
             let data = try Data(contentsOf: statusFile)
+            // Skip if file content hasn't changed
+            if data == lastFileData { return }
+            lastFileData = data
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let loaded = try decoder.decode([Agent].self, from: data)

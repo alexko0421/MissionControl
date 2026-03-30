@@ -43,6 +43,44 @@ def get_project_name(cwd):
         return "Unknown"
     return os.path.basename(cwd)
 
+def detect_app():
+    """Detect which app this Claude session is running in."""
+    bundle_id = os.environ.get("__CFBundleIdentifier", "")
+    mapping = {
+        "com.apple.Terminal": "Terminal",
+        "com.google.antigravity": "Antigravity",
+    }
+    if bundle_id in mapping:
+        return mapping[bundle_id]
+    # Check parent process for conductor/codex
+    try:
+        ppid = os.getppid()
+        while ppid > 1:
+            cmd = subprocess.check_output(
+                ["ps", "-p", str(ppid), "-o", "comm="],
+                stderr=subprocess.DEVNULL, timeout=3
+            ).decode().strip()
+            cmd_lower = cmd.lower()
+            if "conductor" in cmd_lower:
+                return "Conductor"
+            if "codex" in cmd_lower:
+                return "Codex"
+            if "antigravity" in cmd_lower:
+                return "Antigravity"
+            # Get parent of parent
+            ppid_str = subprocess.check_output(
+                ["ps", "-p", str(ppid), "-o", "ppid="],
+                stderr=subprocess.DEVNULL, timeout=3
+            ).decode().strip()
+            ppid = int(ppid_str)
+    except:
+        pass
+    if bundle_id:
+        # Return bundle name as fallback
+        parts = bundle_id.split(".")
+        return parts[-1].capitalize() if parts else "Terminal"
+    return "Terminal"
+
 def detect_tmux():
     """Detect if we're running inside tmux and return session/window/pane."""
     if not os.environ.get("TMUX"):
@@ -73,14 +111,25 @@ def guess_status(message):
         "which option", "do you want", "should i", "please choose", "waiting for",
         "need your", "what do you think", "let me know", "your choice", "pick one",
         "would you like", "want me to", "prefer", "choose between",
+        "option a", "option b", "option 1", "option 2",
+        "approach a", "approach b", "approach 1", "approach 2",
+        "which do you", "which would you", "what would you",
+        "your decision", "your input", "your feedback",
+        "select one", "pick between", "decide between",
         # Simplified Chinese
         "你想", "你觉得", "要你决定", "需要你", "你的意见", "请选择",
-        "你选", "你希望", "你认为", "请确认",
+        "你选", "你希望", "你认为", "请确认", "你来决定", "你决定",
+        "方案a", "方案b", "方案1", "方案2", "选项a", "选项b",
+        "哪个", "哪种", "要哪", "选哪", "你要",
+        # Traditional Chinese
+        "你覺得", "你選", "你希望", "你認為", "請確認", "請選擇",
+        "你來決定", "邊個", "邊種",
     ]
-    # Question mark at end of message is a strong signal
-    last_line = message.strip().split("\n")[-1].strip() if message.strip() else ""
-    if last_line.endswith("?") or last_line.endswith("？"):
-        return "blocked"
+    # Question mark at end of last few lines is a strong signal
+    lines = [l.strip() for l in message.strip().split("\n") if l.strip()]
+    for line in lines[-3:]:  # check last 3 lines
+        if line.endswith("?") or line.endswith("？") or line.endswith("吗") or line.endswith("嗎") or line.endswith("呢"):
+            return "blocked"
     for signal in blocked_signals:
         if signal in msg:
             return "blocked"
@@ -180,6 +229,12 @@ def main():
     message = hook_input.get("last_assistant_message", "")
     cwd = hook_input.get("cwd", "")
     session_id = hook_input.get("session_id", "")
+    stop_reason = hook_input.get("stop_reason", "")
+
+    # Debug: log raw hook input to see available fields
+    debug_file = os.path.join(STATUS_DIR, "hook-debug.json")
+    with open(debug_file, "w") as df:
+        json.dump({"keys": list(hook_input.keys()), "stop_reason": stop_reason, "raw_sample": {k: str(v)[:200] for k, v in hook_input.items()}}, df, indent=2)
 
     if not message or not cwd:
         return
@@ -187,6 +242,9 @@ def main():
     project_name = get_project_name(cwd)
     agent_id = hashlib.md5(cwd.encode()).hexdigest()[:8]
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # If Claude stopped because it wants to use a tool → likely waiting for user approval
+    is_tool_use_stop = (stop_reason == "tool_use")
 
     # Try Gemini summarization first, fall back to naive extraction
     result = summarize_with_gemini(message, project_name)
@@ -202,6 +260,10 @@ def main():
         summary = truncate(" ".join(lines[:3]), 300) if lines else ""
         next_action = truncate(lines[-1], 200) if lines else ""
 
+    # Override: tool_use stop means Claude is waiting for approval → blocked
+    if is_tool_use_stop and status != "done":
+        status = "blocked"
+
     # Load existing agents
     agents = []
     if os.path.exists(STATUS_FILE):
@@ -213,6 +275,7 @@ def main():
 
     # Update or add this agent
     found = False
+    app_name = detect_app()
     for i, a in enumerate(agents):
         if a["id"] == agent_id:
             tmux_s, tmux_w, tmux_p = detect_tmux()
@@ -223,6 +286,7 @@ def main():
                 "summary": summary,
                 "nextAction": next_action,
                 "updatedAt": now,
+                "app": app_name,
                 "tmuxSession": tmux_s,
                 "tmuxWindow": tmux_w,
                 "tmuxPane": tmux_p,
@@ -243,6 +307,7 @@ def main():
             "nextAction": next_action,
             "updatedAt": now,
             "worktree": cwd,
+            "app": app_name,
             "tmuxSession": tmux_session,
             "tmuxWindow": tmux_window,
             "tmuxPane": tmux_pane,

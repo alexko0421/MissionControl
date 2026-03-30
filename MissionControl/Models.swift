@@ -11,10 +11,10 @@ enum AgentStatus: String, Codable, CaseIterable {
     func labelFor(lang: String) -> String {
         let isEn = (lang == "En")
         switch self {
-        case .running: return isEn ? "Running" : "進行中"
+        case .running: return isEn ? "Running" : "进行中"
         case .blocked: return isEn ? "Action" : "需要你"
         case .done:    return isEn ? "Done" : "已完成"
-        case .idle:    return isEn ? "Idle" : "閒置"
+        case .idle:    return isEn ? "Idle" : "闲置"
         }
     }
 
@@ -78,6 +78,7 @@ struct Agent: Identifiable, Codable {
     var nextAction: String
     var updatedAt: Date
     var worktree: String?
+    var app: String?
     var tmuxSession: String?
     var tmuxWindow: Int?
     var tmuxPane: Int?
@@ -88,9 +89,9 @@ struct Agent: Identifiable, Codable {
     var timeAgo: String {
         let s = Date().timeIntervalSince(updatedAt)
         let isEn = (Agent.displayLanguage == "En")
-        if s < 60   { return isEn ? "Just now" : "剛剛" }
-        if s < 3600 { return isEn ? "\(Int(s / 60))m ago" : "\(Int(s / 60))分鐘前" }
-        return isEn ? "\(Int(s / 3600))h ago" : "\(Int(s / 3600))小時前"
+        if s < 60   { return isEn ? "Just now" : "刚刚" }
+        if s < 3600 { return isEn ? "\(Int(s / 60))m ago" : "\(Int(s / 60))分钟前" }
+        return isEn ? "\(Int(s / 3600))h ago" : "\(Int(s / 3600))小时前"
     }
 
     var tmuxTarget: String? {

@@ -287,7 +287,6 @@ struct SessionListPanel: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
         )
-        .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
         .padding(.bottom, 12)
         .environment(\.colorScheme, .dark)
         .onAppear { Agent.displayLanguage = appLanguage }
@@ -437,30 +436,60 @@ struct SummaryPanel: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
         )
-        .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
         .padding(.bottom, 12)
         .environment(\.colorScheme, .dark)
     }
 
     private func jumpToSession(agent: Agent) {
-        guard let target = agent.tmuxTarget else { return }
-        Task.detached {
-            // Select the tmux window/pane
-            let selectCmd = "tmux select-window -t \"\(target)\" 2>/dev/null; tmux select-pane -t \"\(target)\" 2>/dev/null"
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-            process.arguments = ["-c", selectCmd]
-            try? process.run()
-            process.waitUntilExit()
+        // Try tmux first
+        if let target = agent.tmuxTarget, agent.tmuxSession != nil {
+            Task.detached {
+                let selectCmd = "tmux select-window -t \"\(target)\" 2>/dev/null; tmux select-pane -t \"\(target)\" 2>/dev/null"
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+                process.arguments = ["-c", selectCmd]
+                try? process.run()
+                process.waitUntilExit()
 
-            // Bring Terminal.app to front
-            let script = "tell application \"Terminal\" to activate"
-            let appleScript = Process()
-            appleScript.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-            appleScript.arguments = ["-e", script]
-            try? appleScript.run()
-            appleScript.waitUntilExit()
+                Self.runAppleScript("tell application \"Terminal\" to activate")
+            }
+            return
         }
+
+        // Activate the app this agent is running in
+        let appName = agent.app ?? "Terminal"
+
+        Task { @MainActor in
+            let workspace = NSWorkspace.shared
+            if let app = workspace.runningApplications.first(where: {
+                $0.localizedName == appName || $0.bundleIdentifier?.localizedCaseInsensitiveContains(appName.lowercased()) == true
+            }) {
+                app.activate()
+            } else {
+                workspace.open(URL(fileURLWithPath: "/Applications/\(appName).app"))
+            }
+        }
+    }
+
+    private static func runAppleScript(_ script: String) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-e", script]
+        try? process.run()
+        process.waitUntilExit()
+    }
+
+    private static func runAppleScriptReturningBool(_ script: String) -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-e", script]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        try? process.run()
+        process.waitUntilExit()
+        let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return output == "true"
     }
 }
 
@@ -570,7 +599,6 @@ struct SettingsInlinePanel: View {
     RoundedRectangle(cornerRadius: 24, style: .continuous)
         .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
 )
-.shadow(color: .black.opacity(0.2), radius: 20, y: 10)
 .padding(.bottom, 12)
 .environment(\.colorScheme, .dark)
 .onDisappear { stopRecording() }
