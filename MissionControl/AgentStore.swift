@@ -21,7 +21,6 @@ class AgentStore: ObservableObject {
     private let statusDir  = FileManager.default.homeDirectoryForCurrentUser
                                 .appendingPathComponent(".mission-control")
     private var statusFile: URL { statusDir.appendingPathComponent("status.json") }
-    private var pollTimer: Timer?
     private var fileSource: DispatchSourceFileSystemObject?
 
     // MARK: - Lifecycle
@@ -30,12 +29,9 @@ class AgentStore: ObservableObject {
         createStatusDirIfNeeded()
         loadFromFile()
         startFileWatcher()
-        startTmuxPolling()
     }
 
     func stopWatching() {
-        pollTimer?.invalidate()
-        pollTimer = nil
         fileSource?.cancel()
         fileSource = nil
     }
@@ -83,37 +79,6 @@ class AgentStore: ObservableObject {
         source.setCancelHandler { close(fd) }
         source.resume()
         fileSource = source
-    }
-
-    // MARK: - tmux Polling
-    // Polls every 5s to refresh terminal output for running agents
-
-    private func startTmuxPolling() {
-        pollTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.pollTmuxAgents() }
-        }
-    }
-
-    private func pollTmuxAgents() {
-        let targets = agents.enumerated().compactMap { (i, a) -> (Int, String)? in
-            guard a.status == .running, let target = a.tmuxTarget else { return nil }
-            return (i, target)
-        }
-        guard !targets.isEmpty else { return }
-        Task.detached {
-            var results: [(Int, [TerminalLine])] = []
-            for (i, target) in targets {
-                let lines = TMuxBridge.capturePane(target: target, lastLines: 30)
-                if !lines.isEmpty { results.append((i, lines)) }
-            }
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                for (i, lines) in results where i < self.agents.count {
-                    self.agents[i].terminalLines = lines
-                    self.agents[i].updatedAt = Date()
-                }
-            }
-        }
     }
 
     // MARK: - Actions
