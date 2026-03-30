@@ -39,7 +39,7 @@ struct TerminalLine: Codable, Identifiable {
 
         var color: Color {
             switch self {
-            case .normal:  return Color.white.opacity(0.35)
+            case .normal:  return .primary.opacity(0.5)
             case .success: return Color(red: 0.365, green: 0.792, blue: 0.647)
             case .warning: return Color(red: 0.937, green: 0.624, blue: 0.153)
             case .error:   return Color(red: 0.886, green: 0.294, blue: 0.290)
