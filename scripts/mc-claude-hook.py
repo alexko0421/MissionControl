@@ -20,12 +20,21 @@ Usage in ~/.claude/settings.json:
 import json
 import os
 import sys
+import re
 import hashlib
 from datetime import datetime, timezone
+from urllib.request import Request, urlopen
 
 STATUS_DIR = os.path.expanduser("~/.mission-control")
 STATUS_FILE = os.path.join(STATUS_DIR, "status.json")
 os.makedirs(STATUS_DIR, exist_ok=True)
+
+# Gemini API key for summarization
+API_KEY = os.environ.get("GEMINI_API_KEY", "")
+if not API_KEY:
+    key_file = os.path.join(STATUS_DIR, "gemini-key.txt")
+    if os.path.exists(key_file):
+        API_KEY = open(key_file).read().strip()
 
 def get_project_name(cwd):
     """Get a readable project name from the working directory."""
@@ -50,6 +59,45 @@ def truncate(text, max_len):
         return text
     return text[:max_len - 3] + "..."
 
+def summarize_with_gemini(message, project_name):
+    """Use Gemini to distill Claude's raw output into a clean summary."""
+    if not API_KEY:
+        return None
+
+    # Truncate message to avoid huge API calls
+    msg = message[:3000] if len(message) > 3000 else message
+
+    prompt = (
+        "你係 Mission Control 嘅摘要引擎。你嘅工作係將 AI coding agent 嘅原始輸出提煉成簡潔嘅工作摘要。\n\n"
+        "規則：\n"
+        "- 用書面繁體中文，唔好用口語\n"
+        "- task: 一句話講而家做緊咩（最多20字），例如「實現全局快捷鍵切換面板」\n"
+        "- summary: 2-3句講做咗咩、進度到邊（最多100字）\n"
+        "- nextAction: 下一步要做咩（最多50字）\n"
+        "- status: running(進行中) / blocked(等待用戶決定) / done(已完成)\n"
+        "- 唔好重複原文，要提煉重點\n"
+        "- 唔好提及檔案名，講功能\n\n"
+        f"Project: {project_name}\n"
+        f"AI Agent 原始輸出：\n{msg}\n\n"
+        "用 JSON 回覆，不要加 markdown code block。\n"
+        '格式：{"status":"...","task":"...","summary":"...","nextAction":"..."}\n'
+    )
+    body = json.dumps({
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 300}
+    }).encode()
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
+
+    try:
+        resp = urlopen(Request(url, data=body, headers={"Content-Type": "application/json"}), timeout=8)
+        data = json.loads(resp.read())
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
+        text = re.sub(r"```json?\s*", "", text)
+        text = re.sub(r"```", "", text)
+        return json.loads(text.strip())
+    except:
+        return None
+
 def main():
     # Read hook input from stdin
     try:
@@ -70,18 +118,20 @@ def main():
     project_name = get_project_name(cwd)
     agent_id = hashlib.md5(cwd.encode()).hexdigest()[:8]
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    status = guess_status(message)
 
-    # Extract first meaningful line as task (skip empty lines and short filler)
-    lines = [l.strip() for l in message.split("\n") if l.strip() and len(l.strip()) > 5]
-    task = truncate(lines[0], 60) if lines else "Working..."
-
-    # Summary: first 3 meaningful lines
-    summary = " ".join(lines[:3]) if lines else ""
-    summary = truncate(summary, 300)
-
-    # Next action: last meaningful line (often contains what to do next)
-    next_action = truncate(lines[-1], 200) if lines else ""
+    # Try Gemini summarization first, fall back to naive extraction
+    result = summarize_with_gemini(message, project_name)
+    if result:
+        status = result.get("status", "running")
+        task = truncate(result.get("task", "Working..."), 60)
+        summary = truncate(result.get("summary", ""), 300)
+        next_action = truncate(result.get("nextAction", ""), 200)
+    else:
+        status = guess_status(message)
+        lines = [l.strip() for l in message.split("\n") if l.strip() and len(l.strip()) > 5]
+        task = truncate(lines[0], 60) if lines else "Working..."
+        summary = truncate(" ".join(lines[:3]), 300) if lines else ""
+        next_action = truncate(lines[-1], 200) if lines else ""
 
     # Load existing agents
     agents = []
