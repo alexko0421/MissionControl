@@ -1,0 +1,131 @@
+import Foundation
+import SwiftUI
+import Combine
+
+// MARK: - AgentStore
+// Central data store. Reads from ~/.mission-control/status.json
+// and polls tmux for live terminal output.
+
+@MainActor
+class AgentStore: ObservableObject {
+    @Published var agents: [Agent] = Agent.samples
+    @Published var selectedAgentId: String? = nil
+
+    private let statusDir  = FileManager.default.homeDirectoryForCurrentUser
+                                .appendingPathComponent(".mission-control")
+    private var statusFile: URL { statusDir.appendingPathComponent("status.json") }
+    private var pollTimer: Timer?
+    private var fileSource: DispatchSourceFileSystemObject?
+
+    // MARK: - Lifecycle
+
+    func startWatching() {
+        createStatusDirIfNeeded()
+        loadFromFile()
+        startFileWatcher()
+        startTmuxPolling()
+    }
+
+    func stopWatching() {
+        pollTimer?.invalidate()
+        pollTimer = nil
+        fileSource?.cancel()
+        fileSource = nil
+    }
+
+    // MARK: - Status File
+
+    private func createStatusDirIfNeeded() {
+        try? FileManager.default.createDirectory(at: statusDir, withIntermediateDirectories: true)
+    }
+
+    func loadFromFile() {
+        guard FileManager.default.fileExists(atPath: statusFile.path) else { return }
+        do {
+            let data = try Data(contentsOf: statusFile)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let loaded = try decoder.decode([Agent].self, from: data)
+            withAnimation(.easeInOut(duration: 0.2)) {
+                self.agents = loaded
+            }
+        } catch {
+            print("AgentStore: failed to load status.json — \(error)")
+        }
+    }
+
+    func saveToFile() {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = .prettyPrinted
+        guard let data = try? encoder.encode(agents) else { return }
+        try? data.write(to: statusFile)
+    }
+
+    // Watch for file changes using DispatchSource
+    private func startFileWatcher() {
+        guard FileManager.default.fileExists(atPath: statusFile.path) else { return }
+        let fd = open(statusFile.path, O_EVTONLY)
+        guard fd >= 0 else { return }
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd,
+            eventMask: .write,
+            queue: DispatchQueue.main
+        )
+        source.setEventHandler { [weak self] in self?.loadFromFile() }
+        source.setCancelHandler { close(fd) }
+        source.resume()
+        fileSource = source
+    }
+
+    // MARK: - tmux Polling
+    // Polls every 5s to refresh terminal output for running agents
+
+    private func startTmuxPolling() {
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.pollTmuxAgents() }
+        }
+    }
+
+    private func pollTmuxAgents() {
+        for i in agents.indices {
+            guard agents[i].status == .running,
+                  let target = agents[i].tmuxTarget else { continue }
+            let lines = TMuxBridge.capturePane(target: target, lastLines: 30)
+            if !lines.isEmpty {
+                agents[i].terminalLines = lines
+                agents[i].updatedAt = Date()
+            }
+        }
+    }
+
+    // MARK: - Actions
+
+    func sendCommand(_ text: String, to agent: Agent) {
+        guard let target = agent.tmuxTarget else {
+            // No tmux target — append to log only
+            appendUserMessage(text, agentId: agent.id)
+            return
+        }
+        TMuxBridge.sendKeys(target: target, command: text)
+        appendUserMessage(text, agentId: agent.id)
+    }
+
+    private func appendUserMessage(_ text: String, agentId: String) {
+        guard let i = agents.firstIndex(where: { $0.id == agentId }) else { return }
+        let line = TerminalLine(text: "▶ \(text)", type: .success)
+        agents[i].terminalLines.append(line)
+        agents[i].updatedAt = Date()
+    }
+
+    // MARK: - Computed
+
+    var runningCount: Int  { agents.filter { $0.status == .running }.count }
+    var blockedCount: Int  { agents.filter { $0.status == .blocked }.count }
+    var doneCount: Int     { agents.filter { $0.status == .done    }.count }
+
+    var selectedAgent: Agent? {
+        guard let id = selectedAgentId else { return nil }
+        return agents.first { $0.id == id }
+    }
+}
