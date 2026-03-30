@@ -14,6 +14,7 @@ class AgentStore: ObservableObject {
         case terminal
         case sessionList
         case summary(agentId: String)
+        case settings
     }
 
     @Published var viewState: ViewState = .terminal
@@ -180,6 +181,7 @@ class AgentStore: ObservableObject {
         case .terminal: return "terminal"
         case .sessionList: return "sessionList"
         case .summary(let id): return "summary-\(id)"
+        case .settings: return "settings"
         }
     }
 }

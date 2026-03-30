@@ -6,12 +6,15 @@ import SwiftUI
 enum AgentStatus: String, Codable, CaseIterable {
     case running, blocked, done, idle
 
-    var label: String {
+    var label: String { labelFor(lang: Agent.displayLanguage) }
+
+    func labelFor(lang: String) -> String {
+        let isEn = (lang == "En")
         switch self {
-        case .running: return "進行中"
-        case .blocked: return "需要你"
-        case .done:    return "已完成"
-        case .idle:    return "閒置"
+        case .running: return isEn ? "Running" : "進行中"
+        case .blocked: return isEn ? "Action" : "需要你"
+        case .done:    return isEn ? "Done" : "已完成"
+        case .idle:    return isEn ? "Idle" : "閒置"
         }
     }
 
@@ -79,11 +82,15 @@ struct Agent: Identifiable, Codable {
     var tmuxWindow: Int?
     var tmuxPane: Int?
 
+    /// Shared language setting — set by the app on launch / change
+    static var displayLanguage: String = "Auto"
+
     var timeAgo: String {
         let s = Date().timeIntervalSince(updatedAt)
-        if s < 60   { return "剛剛" }
-        if s < 3600 { return "\(Int(s / 60))分鐘前" }
-        return "\(Int(s / 3600))小時前"
+        let isEn = (Agent.displayLanguage == "En")
+        if s < 60   { return isEn ? "Just now" : "剛剛" }
+        if s < 3600 { return isEn ? "\(Int(s / 60))m ago" : "\(Int(s / 60))分鐘前" }
+        return isEn ? "\(Int(s / 3600))h ago" : "\(Int(s / 3600))小時前"
     }
 
     var tmuxTarget: String? {

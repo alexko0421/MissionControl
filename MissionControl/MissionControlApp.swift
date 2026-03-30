@@ -5,9 +5,9 @@ struct MissionControlApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        // Empty settings scene — the panel is managed by AppDelegate
+        // Standard macOS Settings scene
         Settings {
-            EmptyView()
+            SettingsView()
         }
     }
 }
@@ -33,8 +33,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Position near top-center of screen
         if let screen = NSScreen.main {
             let screenFrame = screen.visibleFrame
+            // Keep the exact original X center the user is used to
             let x = screenFrame.midX - 200
-            let y = screenFrame.maxY - 80
+            // Push it higher up near the menu bar
+            let y = screenFrame.maxY - 45
             panel.setFrameOrigin(NSPoint(x: x, y: y))
         }
         panel.orderFrontRegardless()
