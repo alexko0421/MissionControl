@@ -190,8 +190,10 @@ struct SafeToFocusOrTask: View {
     let task: String
     let blockedCount: Int
     let hasAgents: Bool
+    @AppStorage("appLanguage") private var appLanguage = "Auto"
 
     private let safeColor = Color(red: 0.365, green: 0.792, blue: 0.647)
+    private var safeText: String { appLanguage == "En" ? "All clear" : "安心工作" }
 
     var body: some View {
         Group {
@@ -200,7 +202,7 @@ struct SafeToFocusOrTask: View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(safeColor)
-                    Text("安心工作")
+                    Text(safeText)
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(safeColor.opacity(0.9))
                 }

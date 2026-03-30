@@ -92,32 +92,65 @@ def truncate(text, max_len):
         return text
     return text[:max_len - 3] + "..."
 
+def get_app_language():
+    """Read app language setting from UserDefaults."""
+    try:
+        result = subprocess.check_output(
+            ["defaults", "read", "com.yourcompany.MissionControl", "appLanguage"],
+            stderr=subprocess.DEVNULL, timeout=3
+        ).decode().strip()
+        return result if result in ("En", "Zh") else "Zh"
+    except:
+        return "Zh"
+
 def summarize_with_gemini(message, project_name):
     """Use Gemini to distill Claude's raw output into a clean summary."""
     if not API_KEY:
         return None
 
+    lang = get_app_language()
+
     # Truncate message to avoid huge API calls
     msg = message[:3000] if len(message) > 3000 else message
 
-    prompt = (
-        "你是 Mission Control 的摘要引擎。你的工作是将 AI coding agent 的原始输出提炼成简洁的工作摘要。\n\n"
-        "规则：\n"
-        "- 用简体中文书面语\n"
-        "- task: 一句话讲当前在做什么（最多20字），例如「实现全局快捷键切换面板」\n"
-        "- summary: 2-3句讲做了什么、进度到哪（最多100字）\n"
-        "- nextAction: 下一步要做什么（最多50字）\n"
-        "- status 判断规则（非常重要）：\n"
-        "  - blocked: 消息结尾有问号、或要求用户做选择/决定/确认\n"
-        "  - done: 明确说「完成」「done」且没有后续问题\n"
-        "  - running: 其他所有情况（正在工作、刚做完但还有下一步）\n"
-        "- 不要重复原文，要提炼重点\n"
-        "- 不要提及文件名，讲功能\n\n"
-        f"Project: {project_name}\n"
-        f"AI Agent 原始输出：\n{msg}\n\n"
-        "用 JSON 回复，不要加 markdown code block。\n"
-        '格式：{"status":"...","task":"...","summary":"...","nextAction":"..."}\n'
-    )
+    if lang == "En":
+        prompt = (
+            "You are Mission Control's summary engine. Distill AI coding agent output into a clean summary.\n\n"
+            "Rules:\n"
+            "- Use concise English\n"
+            "- task: one sentence about current work (max 40 chars), e.g. 'Implement global hotkey toggle'\n"
+            "- summary: 2-3 sentences about what was done and progress (max 200 chars)\n"
+            "- nextAction: what to do next (max 100 chars)\n"
+            "- status rules (very important):\n"
+            "  - blocked: message ends with question mark, or asks user to choose/decide/confirm\n"
+            "  - done: explicitly says 'done'/'complete' with no follow-up questions\n"
+            "  - running: all other cases\n"
+            "- Do not repeat raw output, distill key points\n"
+            "- Describe features, not filenames\n\n"
+            f"Project: {project_name}\n"
+            f"AI Agent raw output:\n{msg}\n\n"
+            "Reply in JSON only, no markdown code block.\n"
+            'Format: {"status":"...","task":"...","summary":"...","nextAction":"..."}\n'
+        )
+    else:
+        prompt = (
+            "你是 Mission Control 的摘要引擎。你的工作是将 AI coding agent 的原始输出提炼成简洁的工作摘要。\n\n"
+            "规则：\n"
+            "- 用简体中文书面语\n"
+            "- task: 一句话讲当前在做什么（最多20字），例如「实现全局快捷键切换面板」\n"
+            "- summary: 2-3句讲做了什么、进度到哪（最多100字）\n"
+            "- nextAction: 下一步要做什么（最多50字）\n"
+            "- status 判断规则（非常重要）：\n"
+            "  - blocked: 消息结尾有问号、或要求用户做选择/决定/确认\n"
+            "  - done: 明确说「完成」「done」且没有后续问题\n"
+            "  - running: 其他所有情况（正在工作、刚做完但还有下一步）\n"
+            "- 不要重复原文，要提炼重点\n"
+            "- 不要提及文件名，讲功能\n\n"
+            f"Project: {project_name}\n"
+            f"AI Agent 原始输出：\n{msg}\n\n"
+            "用 JSON 回复，不要加 markdown code block。\n"
+            '格式：{"status":"...","task":"...","summary":"...","nextAction":"..."}\n'
+        )
     body = json.dumps({
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.1, "maxOutputTokens": 300}
