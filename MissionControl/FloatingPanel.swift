@@ -5,7 +5,7 @@ class FloatingPanel: NSPanel {
     init(contentRect: NSRect) {
         super.init(
             contentRect: contentRect,
-            styleMask: [.nonactivatingPanel, .titled, .closable, .resizable, .fullSizeContentView],
+            styleMask: [.nonactivatingPanel, .fullSizeContentView, .borderless],
             backing: .buffered,
             defer: false
         )
@@ -14,21 +14,19 @@ class FloatingPanel: NSPanel {
         level = .floating
         isFloatingPanel = true
 
-        // Transparent titlebar
-        titlebarAppearsTransparent = true
-        titleVisibility = .hidden
-
-        // Semi-transparent background
+        // Fully transparent — SwiftUI handles all visuals
         isOpaque = false
-        backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.92)
+        backgroundColor = .clear
+        hasShadow = false
 
-        // Allow interaction without activating the app
+        // Don't steal focus, don't hide on deactivate
         hidesOnDeactivate = false
-
-        // Remember position
         isMovableByWindowBackground = true
 
-        // Min size
-        minSize = NSSize(width: 360, height: 280)
+        // Allow resizing via SwiftUI content
+        isMovable = true
     }
+
+    // Allow the panel to become key (for interactions) even as a non-activating panel
+    override var canBecomeKey: Bool { true }
 }

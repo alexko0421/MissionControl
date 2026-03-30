@@ -4,44 +4,217 @@ struct ContentView: View {
     @EnvironmentObject var store: AgentStore
 
     var body: some View {
-        ZStack {
-            // Base layer: Terminal or Summary
-            Group {
-                switch store.viewState {
-                case .terminal, .sessionList:
-                    if let agent = store.priorityAgent {
-                        TerminalView(agent: agent)
-                    } else {
-                        emptyState
-                    }
-                case .summary(let agentId):
-                    if let agent = store.agents.first(where: { $0.id == agentId }) {
-                        SummaryView(agent: agent)
-                    } else {
-                        emptyState
-                    }
+        VStack(spacing: 0) {
+            // The capsule widget
+            CapsuleBar()
+
+            // Expanded content (session list or summary)
+            if case .sessionList = store.viewState {
+                SessionListPanel()
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+
+            if case .summary(let agentId) = store.viewState {
+                if let agent = store.agents.first(where: { $0.id == agentId }) {
+                    SummaryPanel(agent: agent)
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
-            .transition(.opacity)
-            .animation(.easeInOut(duration: 0.18), value: store.viewStateKey)
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: store.viewStateKey)
+        .fixedSize()
+    }
+}
 
-            // Overlay layer: Session list
-            if case .sessionList = store.viewState {
-                SessionListOverlay()
-                    .transition(.opacity)
+// MARK: - Capsule Bar (always visible)
+
+struct CapsuleBar: View {
+    @EnvironmentObject var store: AgentStore
+
+    var body: some View {
+        HStack(spacing: 10) {
+            // ☰ Menu button
+            Button(action: { store.toggleSessionList() }) {
+                Image(systemName: store.isSessionListOpen ? "xmark" : "line.3.horizontal")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.primary.opacity(0.6))
+                    .frame(width: 20, height: 20)
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .buttonStyle(.plain)
+
+            if let agent = store.priorityAgent {
+                // Status dot
+                StatusDot(status: agent.status)
+
+                // Agent name
+                Text(agent.name)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.primary.opacity(0.85))
+                    .lineLimit(1)
+
+                // Divider
+                RoundedRectangle(cornerRadius: 0.5)
+                    .fill(.primary.opacity(0.1))
+                    .frame(width: 1, height: 14)
+
+                // Task (truncated)
+                Text(agent.task)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .frame(maxWidth: 180, alignment: .leading)
+            } else {
+                Text("未有 Session")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
             }
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial, in: Capsule())
+        .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
+        .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
     }
+}
 
-    private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "terminal")
-                .font(.system(size: 28))
-                .foregroundStyle(.secondary.opacity(0.3))
-            Text("未有 Session")
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary.opacity(0.4))
+// MARK: - Session List Panel (dropdown)
+
+struct SessionListPanel: View {
+    @EnvironmentObject var store: AgentStore
+
+    var body: some View {
+        VStack(spacing: 4) {
+            ForEach(store.sortedAgents) { agent in
+                SessionRow(agent: agent)
+                    .onTapGesture {
+                        store.showSummary(for: agent.id)
+                    }
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(8)
+        .frame(width: 340)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .shadow(color: .black.opacity(0.15), radius: 16, y: 6)
+        .padding(.top, 6)
+    }
+}
+
+struct SessionRow: View {
+    let agent: Agent
+    @State private var isHovered = false
+
+    var body: some View {
+        HStack(spacing: 9) {
+            StatusDot(status: agent.status)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(agent.name)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.primary.opacity(0.85))
+                    .lineLimit(1)
+
+                Text(agent.task)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Text(agent.status.label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundColor(agent.status.color)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(agent.status.color.opacity(0.12), in: Capsule())
+
+            Text(agent.timeAgo)
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(.primary.opacity(isHovered ? 0.06 : 0))
+        )
+        .onHover { isHovered = $0 }
+        .contentShape(Rectangle())
+    }
+}
+
+// MARK: - Summary Panel (expanded detail)
+
+struct SummaryPanel: View {
+    let agent: Agent
+    @EnvironmentObject var store: AgentStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header
+            HStack {
+                StatusDot(status: agent.status)
+                Text(agent.name)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Button(action: { store.showTerminal() }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 18, height: 18)
+                        .background(.primary.opacity(0.06), in: Circle())
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Task
+            InfoBlock(label: "任務", text: agent.task)
+
+            // Summary
+            InfoBlock(label: "摘要", text: agent.summary)
+
+            // Next action
+            HStack(alignment: .top, spacing: 6) {
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(AgentStatus.running.color)
+                    .frame(width: 14)
+                Text(agent.nextAction)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.primary.opacity(0.7))
+                    .lineSpacing(3)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.primary.opacity(0.03), in: RoundedRectangle(cornerRadius: 8))
+        }
+        .padding(14)
+        .frame(width: 340)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .shadow(color: .black.opacity(0.15), radius: 16, y: 6)
+        .padding(.top, 6)
+    }
+}
+
+struct InfoBlock: View {
+    let label: String
+    let text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.tertiary)
+                .textCase(.uppercase)
+            Text(text)
+                .font(.system(size: 11))
+                .foregroundStyle(.primary.opacity(0.7))
+                .lineSpacing(3)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

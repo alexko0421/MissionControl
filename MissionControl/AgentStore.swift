@@ -198,6 +198,11 @@ class AgentStore: ObservableObject {
         }
     }
 
+    var isSessionListOpen: Bool {
+        if case .sessionList = viewState { return true }
+        return false
+    }
+
     var summaryAgent: Agent? {
         if case .summary(let id) = viewState {
             return agents.first { $0.id == id }

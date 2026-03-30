@@ -9,20 +9,14 @@
 /* Begin PBXBuildFile section */
 		18EBB7589717682CACEE3C82 /* AgentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CD92BF1CC6D897039953331 /* AgentStore.swift */; };
 		309202C4D767933F88AEE889 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB5DA73C418961FC7B25AE84 /* ContentView.swift */; };
-		367E9F0F1C70C6F7B3EE5581 /* SessionListOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF18D0B254C1826D6076A11 /* SessionListOverlay.swift */; };
 		3FE08E3257F665D905CF0150 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45103C04701C5A509D84DB0C /* Models.swift */; };
 		5330C852D09BB43E679EA616 /* MissionControlApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F3A0C88E4BC3F8B5E50F748 /* MissionControlApp.swift */; };
-		982887E1B4501059988D3C08 /* TerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26EA9AAB537F5EB4C861580A /* TerminalView.swift */; };
 		BEF901D6CA7FDC079E558640 /* FloatingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C3584F32DE0F76E15442837 /* FloatingPanel.swift */; };
 		C4743423AE7822B8D064106B /* TMuxBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D35A893FADD2B3ECFCBC0F9 /* TMuxBridge.swift */; };
-		C55134357FDBE243FB3592E0 /* SummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EF8C323999365ABEE29AAC3 /* SummaryView.swift */; };
 		C8C4E552AC4084FF1B41E072 /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD80219C23C6E929034D3869 /* SharedComponents.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0EF8C323999365ABEE29AAC3 /* SummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummaryView.swift; sourceTree = "<group>"; };
-		1DF18D0B254C1826D6076A11 /* SessionListOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionListOverlay.swift; sourceTree = "<group>"; };
-		26EA9AAB537F5EB4C861580A /* TerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalView.swift; sourceTree = "<group>"; };
 		45103C04701C5A509D84DB0C /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		4BF55F93FA2531E7F621514C /* MissionControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MissionControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C3584F32DE0F76E15442837 /* FloatingPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPanel.swift; sourceTree = "<group>"; };
@@ -50,10 +44,7 @@
 				5C3584F32DE0F76E15442837 /* FloatingPanel.swift */,
 				8F3A0C88E4BC3F8B5E50F748 /* MissionControlApp.swift */,
 				45103C04701C5A509D84DB0C /* Models.swift */,
-				1DF18D0B254C1826D6076A11 /* SessionListOverlay.swift */,
 				CD80219C23C6E929034D3869 /* SharedComponents.swift */,
-				0EF8C323999365ABEE29AAC3 /* SummaryView.swift */,
-				26EA9AAB537F5EB4C861580A /* TerminalView.swift */,
 				6D35A893FADD2B3ECFCBC0F9 /* TMuxBridge.swift */,
 			);
 			path = MissionControl;
@@ -127,11 +118,8 @@
 				BEF901D6CA7FDC079E558640 /* FloatingPanel.swift in Sources */,
 				5330C852D09BB43E679EA616 /* MissionControlApp.swift in Sources */,
 				3FE08E3257F665D905CF0150 /* Models.swift in Sources */,
-				367E9F0F1C70C6F7B3EE5581 /* SessionListOverlay.swift in Sources */,
 				C8C4E552AC4084FF1B41E072 /* SharedComponents.swift in Sources */,
-				C55134357FDBE243FB3592E0 /* SummaryView.swift in Sources */,
 				C4743423AE7822B8D064106B /* TMuxBridge.swift in Sources */,
-				982887E1B4501059988D3C08 /* TerminalView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
