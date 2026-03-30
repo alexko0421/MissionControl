@@ -40,3 +40,37 @@ struct StatusBadge: View {
             .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 }
+
+// MARK: - Alert Pulse Modifier
+
+struct AlertPulseModifier: ViewModifier {
+    let isActive: Bool
+    @State private var pulse = false
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                RoundedRectangle(cornerRadius: 100)
+                    .stroke(Color(red: 0.937, green: 0.624, blue: 0.153), lineWidth: pulse ? 2 : 0)
+                    .opacity(pulse ? 0.8 : 0)
+                    .scaleEffect(pulse ? 1.05 : 1.0)
+                    .animation(
+                        isActive ? .easeInOut(duration: 0.5).repeatCount(6, autoreverses: true) : .default,
+                        value: pulse
+                    )
+            )
+            .onChange(of: isActive) { newValue in
+                if newValue {
+                    pulse = true
+                } else {
+                    pulse = false
+                }
+            }
+    }
+}
+
+extension View {
+    func alertPulse(isActive: Bool) -> some View {
+        modifier(AlertPulseModifier(isActive: isActive))
+    }
+}

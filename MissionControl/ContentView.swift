@@ -157,11 +157,19 @@ struct CapsuleBar: View {
                 Capsule().stroke(Color.white.opacity(0.2), lineWidth: 0.5)
             )
             .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+            .alertPulse(isActive: store.activeAlert != nil)
             .animation(.spring(response: 0.55, dampingFraction: 0.9), value: store.priorityAgent?.id)
         }
         .padding(.horizontal, 12)
         .padding(.top, 12)
         .padding(.bottom, 6)
+        .onChange(of: store.activeAlert) { newAlert in
+            if newAlert != nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                    store.dismissAlert()
+                }
+            }
+        }
         .environment(\.colorScheme, .dark)
     }
 }
@@ -269,8 +277,9 @@ struct SessionRow: View {
             Text(agent.status.label)
                 .font(.system(size: 10, weight: .bold, design: .rounded))
                 .foregroundColor(agent.status.color)
-                .frame(width: 44)
+                .padding(.horizontal, 8)
                 .padding(.vertical, 4)
+                .frame(minWidth: 44)
                 .background(agent.status.color.opacity(0.15), in: Capsule())
 
             Text(agent.timeAgo)
