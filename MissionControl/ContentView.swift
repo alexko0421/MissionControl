@@ -350,26 +350,30 @@ struct SummaryPanel: View {
                     .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
             )
 
-            // Next action
-            HStack(alignment: .top, spacing: 8) {
-                Image(systemName: "arrow.right.circle.fill")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.white.opacity(0.8))
-                    .padding(.top, 1)
-                
-                Text(agent.nextAction)
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.85))
-                    .lineSpacing(4)
+            // Next action — tap to jump to tmux session
+            Button(action: { jumpToSession(agent: agent) }) {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: agent.tmuxSession != nil ? "arrow.right.circle.fill" : "arrow.right.circle")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white.opacity(0.8))
+                        .padding(.top, 1)
+
+                    Text(agent.nextAction)
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .lineSpacing(4)
+                        .multilineTextAlignment(.leading)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.white.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                )
             }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.white.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
-            )
+            .buttonStyle(.plain)
         }
         .padding(16)
         .frame(width: 360)
@@ -383,6 +387,27 @@ struct SummaryPanel: View {
         .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
         .padding(.bottom, 12)
         .environment(\.colorScheme, .dark)
+    }
+
+    private func jumpToSession(agent: Agent) {
+        guard let target = agent.tmuxTarget else { return }
+        Task.detached {
+            // Select the tmux window/pane
+            let selectCmd = "tmux select-window -t \"\(target)\" 2>/dev/null; tmux select-pane -t \"\(target)\" 2>/dev/null"
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+            process.arguments = ["-c", selectCmd]
+            try? process.run()
+            process.waitUntilExit()
+
+            // Bring Terminal.app to front
+            let script = "tell application \"Terminal\" to activate"
+            let appleScript = Process()
+            appleScript.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+            appleScript.arguments = ["-e", script]
+            try? appleScript.run()
+            appleScript.waitUntilExit()
+        }
     }
 }
 

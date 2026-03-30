@@ -22,6 +22,7 @@ import os
 import sys
 import re
 import hashlib
+import subprocess
 from datetime import datetime, timezone
 from urllib.request import Request, urlopen
 
@@ -41,6 +42,27 @@ def get_project_name(cwd):
     if not cwd:
         return "Unknown"
     return os.path.basename(cwd)
+
+def detect_tmux():
+    """Detect if we're running inside tmux and return session/window/pane."""
+    if not os.environ.get("TMUX"):
+        return None, 0, 0
+    try:
+        session = subprocess.check_output(
+            ["tmux", "display-message", "-p", "#{session_name}"],
+            stderr=subprocess.DEVNULL, timeout=3
+        ).decode().strip()
+        window = subprocess.check_output(
+            ["tmux", "display-message", "-p", "#{window_index}"],
+            stderr=subprocess.DEVNULL, timeout=3
+        ).decode().strip()
+        pane = subprocess.check_output(
+            ["tmux", "display-message", "-p", "#{pane_index}"],
+            stderr=subprocess.DEVNULL, timeout=3
+        ).decode().strip()
+        return session or None, int(window or 0), int(pane or 0)
+    except:
+        return None, 0, 0
 
 def guess_status(message):
     """Simple heuristic for agent status based on message content."""
@@ -146,6 +168,7 @@ def main():
     found = False
     for i, a in enumerate(agents):
         if a["id"] == agent_id:
+            tmux_s, tmux_w, tmux_p = detect_tmux()
             agents[i].update({
                 "name": project_name,
                 "status": status,
@@ -153,9 +176,14 @@ def main():
                 "summary": summary,
                 "nextAction": next_action,
                 "updatedAt": now,
+                "tmuxSession": tmux_s,
+                "tmuxWindow": tmux_w,
+                "tmuxPane": tmux_p,
             })
             found = True
             break
+
+    tmux_session, tmux_window, tmux_pane = detect_tmux()
 
     if not found:
         agents.append({
@@ -168,9 +196,9 @@ def main():
             "nextAction": next_action,
             "updatedAt": now,
             "worktree": cwd,
-            "tmuxSession": None,
-            "tmuxWindow": 0,
-            "tmuxPane": 0,
+            "tmuxSession": tmux_session,
+            "tmuxWindow": tmux_window,
+            "tmuxPane": tmux_pane,
         })
 
     with open(STATUS_FILE, "w") as f:
