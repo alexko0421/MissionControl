@@ -42,7 +42,7 @@ MissionControl/
 └── TMuxBridge.swift          — tmux CLI wrapper
 
 scripts/
-├── mc-claude-hook.py         — Claude Code Stop hook (Gemini summarization)
+├── mc-claude-hook.py         — Claude Code Stop hook (AI summarization)
 ├── mc-prompt-hook.py         — Claude Code UserPromptSubmit hook
 ├── mc-pretool-hook.py        — Claude Code PreToolUse hook (detects approval wait)
 ├── mc-posttool-hook.py       — Claude Code PostToolUse hook
@@ -61,7 +61,7 @@ Configured via hooks in `~/.claude/settings.json`:
 | `UserPromptSubmit` | User sends a message | → `running` |
 | `PreToolUse` | Claude wants to use a tool (may need approval) | → `blocked` |
 | `PostToolUse` | Tool execution complete | → `running` |
-| `Stop` | Claude finishes responding | → Gemini decides |
+| `Stop` | Claude finishes responding | → AI summarizer decides |
 
 ### Antigravity
 
