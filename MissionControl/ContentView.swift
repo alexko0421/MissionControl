@@ -13,7 +13,6 @@ struct ContentView: View {
             // We use ZStack or just VStack to manage the emerging views so they render below CapsuleBar
             VStack(spacing: 0) {
                 if case .sessionList = store.viewState {
-                    CognitiveLoadBar(runningCount: store.runningCount)
                     SessionListPanel()
                         .transition(
                             .asymmetric(
@@ -182,52 +181,6 @@ struct CapsuleBar: View {
             }
         }
         .environment(\.colorScheme, .dark)
-    }
-}
-
-// MARK: - Cognitive Load Bar
-
-struct CognitiveLoadBar: View {
-    let runningCount: Int
-
-    private var loadColor: Color {
-        switch runningCount {
-        case 0:     return .clear
-        case 1...2: return Color(red: 0.365, green: 0.792, blue: 0.647) // green
-        case 3...4: return Color(red: 0.937, green: 0.624, blue: 0.153) // yellow/orange
-        default:    return Color(red: 0.886, green: 0.294, blue: 0.290) // red
-        }
-    }
-
-    private var loadText: String {
-        switch runningCount {
-        case 0:     return ""
-        case 1...2: return "\(runningCount) agent"
-        case 3...4: return "⚠ \(runningCount) agents"
-        default:    return "🔴 \(runningCount) agents"
-        }
-    }
-
-    var body: some View {
-        if runningCount > 0 {
-            HStack(spacing: 4) {
-                RoundedRectangle(cornerRadius: 1)
-                    .fill(loadColor)
-                    .frame(width: CGFloat(min(runningCount, 6)) * 12, height: 3)
-                    .animation(.easeInOut(duration: 0.3), value: runningCount)
-
-                if runningCount >= 3 {
-                    Text(loadText)
-                        .font(.system(size: 9, weight: .semibold, design: .rounded))
-                        .foregroundStyle(loadColor)
-                }
-
-                Spacer()
-            }
-            .padding(.horizontal, 54)
-            .padding(.bottom, 2)
-            .environment(\.colorScheme, .dark)
-        }
     }
 }
 
