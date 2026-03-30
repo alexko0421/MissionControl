@@ -22,13 +22,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let contentRect = NSRect(x: 0, y: 0, width: 10, height: 10)
         panel = FloatingPanel(contentRect: contentRect)
 
-        // Set SwiftUI content
-        let hostingView = NSHostingView(rootView:
-            ContentView()
-                .environmentObject(store)
-        )
-        hostingView.translatesAutoresizingMaskIntoConstraints = false
-        panel.contentView = hostingView
+        // Set SwiftUI content with real macOS vibrancy backing
+        let swiftUIContent = ContentView()
+            .environmentObject(store)
+        let vibrancyView = VibrancyHostingView(rootView: swiftUIContent)
+        vibrancyView.translatesAutoresizingMaskIntoConstraints = false
+        panel.contentView = vibrancyView
 
         // Position near top-center of screen
         if let screen = NSScreen.main {

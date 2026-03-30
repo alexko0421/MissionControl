@@ -4,7 +4,7 @@ struct ContentView: View {
     @EnvironmentObject var store: AgentStore
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 6) {
             // The capsule widget
             CapsuleBar()
 
@@ -21,6 +21,7 @@ struct ContentView: View {
                 }
             }
         }
+        .padding(4)
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: store.viewStateKey)
         .fixedSize()
     }
@@ -33,7 +34,7 @@ struct CapsuleBar: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            // ☰ Menu button
+            // Menu button
             Button(action: { store.toggleSessionList() }) {
                 Image(systemName: store.isSessionListOpen ? "xmark" : "line.3.horizontal")
                     .font(.system(size: 12, weight: .medium))
@@ -44,21 +45,17 @@ struct CapsuleBar: View {
             .buttonStyle(.plain)
 
             if let agent = store.priorityAgent {
-                // Status dot
                 StatusDot(status: agent.status)
 
-                // Agent name
                 Text(agent.name)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.primary.opacity(0.85))
                     .lineLimit(1)
 
-                // Divider
                 RoundedRectangle(cornerRadius: 0.5)
-                    .fill(.primary.opacity(0.1))
+                    .fill(.primary.opacity(0.12))
                     .frame(width: 1, height: 14)
 
-                // Task (truncated)
                 Text(agent.task)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
@@ -72,9 +69,6 @@ struct CapsuleBar: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(.ultraThinMaterial, in: Capsule())
-        .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
-        .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
     }
 }
 
@@ -84,7 +78,7 @@ struct SessionListPanel: View {
     @EnvironmentObject var store: AgentStore
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 2) {
             ForEach(store.sortedAgents) { agent in
                 SessionRow(agent: agent)
                     .onTapGesture {
@@ -93,10 +87,6 @@ struct SessionListPanel: View {
             }
         }
         .padding(8)
-        .frame(width: 340)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .shadow(color: .black.opacity(0.15), radius: 16, y: 6)
-        .padding(.top, 6)
     }
 }
 
@@ -137,7 +127,7 @@ struct SessionRow: View {
         .padding(.vertical, 7)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(.primary.opacity(isHovered ? 0.06 : 0))
+                .fill(.primary.opacity(isHovered ? 0.08 : 0))
         )
         .onHover { isHovered = $0 }
         .contentShape(Rectangle())
@@ -152,7 +142,6 @@ struct SummaryPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header
             HStack {
                 StatusDot(status: agent.status)
                 Text(agent.name)
@@ -171,13 +160,9 @@ struct SummaryPanel: View {
                 .buttonStyle(.plain)
             }
 
-            // Task
             InfoBlock(label: "任務", text: agent.task)
-
-            // Summary
             InfoBlock(label: "摘要", text: agent.summary)
 
-            // Next action
             HStack(alignment: .top, spacing: 6) {
                 Image(systemName: "arrow.right")
                     .font(.system(size: 10, weight: .semibold))
@@ -190,13 +175,9 @@ struct SummaryPanel: View {
             }
             .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.primary.opacity(0.03), in: RoundedRectangle(cornerRadius: 8))
+            .background(.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
         }
         .padding(14)
-        .frame(width: 340)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .shadow(color: .black.opacity(0.15), radius: 16, y: 6)
-        .padding(.top, 6)
     }
 }
 
