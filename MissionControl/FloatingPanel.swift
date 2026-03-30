@@ -55,3 +55,24 @@ struct VisualEffectBlur: NSViewRepresentable {
         nsView.blendingMode = blendingMode
     }
 }
+
+// MARK: - Transparent NSHostingView (removes default opaque background)
+
+class TransparentHostingView<Content: View>: NSHostingView<Content> {
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        // Remove the default opaque background added by NSHostingView
+        DispatchQueue.main.async {
+            self.removeOpaqueBackground(from: self)
+        }
+    }
+
+    private func removeOpaqueBackground(from view: NSView) {
+        if let layer = view.layer {
+            layer.backgroundColor = .clear
+        }
+        for subview in view.subviews {
+            removeOpaqueBackground(from: subview)
+        }
+    }
+}

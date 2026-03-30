@@ -22,11 +22,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let contentRect = NSRect(x: 0, y: 0, width: 10, height: 10)
         panel = FloatingPanel(contentRect: contentRect)
 
-        // Set SwiftUI content — each view handles its own glass background
-        let hostingView = NSHostingView(rootView:
+        // Transparent hosting view — no default background
+        let hostingView = TransparentHostingView(rootView:
             ContentView().environmentObject(store)
         )
-        hostingView.layer?.backgroundColor = .clear
         panel.contentView = hostingView
 
         // Position near top-center of screen
