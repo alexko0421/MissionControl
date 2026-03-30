@@ -11,6 +11,14 @@ class AgentStore: ObservableObject {
     @Published var agents: [Agent] = Agent.samples
     @Published var selectedAgentId: String? = nil
 
+    enum ViewState {
+        case terminal
+        case sessionList
+        case summary(agentId: String)
+    }
+
+    @Published var viewState: ViewState = .terminal
+
     private let statusDir  = FileManager.default.homeDirectoryForCurrentUser
                                 .appendingPathComponent(".mission-control")
     private var statusFile: URL { statusDir.appendingPathComponent("status.json") }
@@ -127,5 +135,76 @@ class AgentStore: ObservableObject {
     var selectedAgent: Agent? {
         guard let id = selectedAgentId else { return nil }
         return agents.first { $0.id == id }
+    }
+
+    var priorityAgent: Agent? {
+        // 1. First blocked agent (most recent)
+        if let blocked = agents
+            .filter({ $0.status == .blocked })
+            .sorted(by: { $0.updatedAt > $1.updatedAt })
+            .first {
+            return blocked
+        }
+        // 2. Running agent with most recent output
+        if let running = agents
+            .filter({ $0.status == .running })
+            .sorted(by: { $0.updatedAt > $1.updatedAt })
+            .first {
+            return running
+        }
+        // 3. Most recently updated agent
+        return agents.sorted(by: { $0.updatedAt > $1.updatedAt }).first
+    }
+
+    var sortedAgents: [Agent] {
+        agents.sorted { a, b in
+            let order: [AgentStatus] = [.blocked, .running, .done, .idle]
+            let ai = order.firstIndex(of: a.status) ?? 99
+            let bi = order.firstIndex(of: b.status) ?? 99
+            if ai != bi { return ai < bi }
+            return a.updatedAt > b.updatedAt
+        }
+    }
+
+    func showTerminal() {
+        withAnimation(.easeInOut(duration: 0.18)) {
+            viewState = .terminal
+        }
+    }
+
+    func showSessionList() {
+        withAnimation(.easeInOut(duration: 0.18)) {
+            viewState = .sessionList
+        }
+    }
+
+    func showSummary(for agentId: String) {
+        withAnimation(.easeInOut(duration: 0.18)) {
+            viewState = .summary(agentId: agentId)
+        }
+    }
+
+    func toggleSessionList() {
+        switch viewState {
+        case .sessionList:
+            showTerminal()
+        default:
+            showSessionList()
+        }
+    }
+
+    var summaryAgent: Agent? {
+        if case .summary(let id) = viewState {
+            return agents.first { $0.id == id }
+        }
+        return nil
+    }
+
+    var viewStateKey: String {
+        switch viewState {
+        case .terminal: return "terminal"
+        case .sessionList: return "sessionList"
+        case .summary(let id): return "summary-\(id)"
+        }
     }
 }
