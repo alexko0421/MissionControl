@@ -51,7 +51,7 @@ struct TerminalView: View {
 
                     Color.clear.frame(height: 1).id("bottom")
                 }
-                .onChange(of: agent.terminalLines.count) { _ in
+                .onChange(of: agent.terminalLines.count) { _, _ in
                     withAnimation { proxy.scrollTo("bottom") }
                 }
             }
