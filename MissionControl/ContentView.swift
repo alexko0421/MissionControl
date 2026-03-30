@@ -5,10 +5,8 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            // The capsule widget
             CapsuleBar()
 
-            // Expanded content (session list or summary)
             if case .sessionList = store.viewState {
                 SessionListPanel()
                     .transition(.move(edge: .top).combined(with: .opacity))
@@ -21,20 +19,40 @@ struct ContentView: View {
                 }
             }
         }
-        .padding(4)
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: store.viewStateKey)
         .fixedSize()
     }
 }
 
-// MARK: - Capsule Bar (always visible)
+// MARK: - Glass Capsule Background
+
+struct GlassCapsule: View {
+    var body: some View {
+        VisualEffectBlur(material: .hudWindow, blendingMode: .behindWindow)
+            .clipShape(Capsule())
+            .shadow(color: .black.opacity(0.2), radius: 12, y: 4)
+            .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
+    }
+}
+
+struct GlassRoundedRect: View {
+    var cornerRadius: CGFloat = 14
+
+    var body: some View {
+        VisualEffectBlur(material: .hudWindow, blendingMode: .behindWindow)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .shadow(color: .black.opacity(0.2), radius: 16, y: 6)
+            .shadow(color: .black.opacity(0.06), radius: 2, y: 1)
+    }
+}
+
+// MARK: - Capsule Bar
 
 struct CapsuleBar: View {
     @EnvironmentObject var store: AgentStore
 
     var body: some View {
         HStack(spacing: 10) {
-            // Menu button
             Button(action: { store.toggleSessionList() }) {
                 Image(systemName: store.isSessionListOpen ? "xmark" : "line.3.horizontal")
                     .font(.system(size: 12, weight: .medium))
@@ -69,10 +87,11 @@ struct CapsuleBar: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
+        .background(GlassCapsule())
     }
 }
 
-// MARK: - Session List Panel (dropdown)
+// MARK: - Session List Panel
 
 struct SessionListPanel: View {
     @EnvironmentObject var store: AgentStore
@@ -87,6 +106,7 @@ struct SessionListPanel: View {
             }
         }
         .padding(8)
+        .background(GlassRoundedRect())
     }
 }
 
@@ -127,14 +147,14 @@ struct SessionRow: View {
         .padding(.vertical, 7)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(.primary.opacity(isHovered ? 0.08 : 0))
+                .fill(.white.opacity(isHovered ? 0.08 : 0))
         )
         .onHover { isHovered = $0 }
         .contentShape(Rectangle())
     }
 }
 
-// MARK: - Summary Panel (expanded detail)
+// MARK: - Summary Panel
 
 struct SummaryPanel: View {
     let agent: Agent
@@ -155,7 +175,7 @@ struct SummaryPanel: View {
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(.secondary)
                         .frame(width: 18, height: 18)
-                        .background(.primary.opacity(0.06), in: Circle())
+                        .background(.white.opacity(0.08), in: Circle())
                 }
                 .buttonStyle(.plain)
             }
@@ -175,9 +195,10 @@ struct SummaryPanel: View {
             }
             .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
+            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
         }
         .padding(14)
+        .background(GlassRoundedRect())
     }
 }
 
