@@ -2,20 +2,43 @@ import SwiftUI
 
 @main
 struct MissionControlApp: App {
-    @StateObject private var store = AgentStore()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        WindowGroup {
-            ContentView()
-                .environmentObject(store)
-                .preferredColorScheme(.dark)
-                .onAppear  { store.startWatching() }
-                .onDisappear { store.stopWatching() }
+        // Empty settings scene — the panel is managed by AppDelegate
+        Settings {
+            EmptyView()
         }
-        .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 820, height: 580)
-        .commands {
-            CommandGroup(replacing: .newItem) {}
-        }
+    }
+}
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    private var panel: FloatingPanel!
+    private var store = AgentStore()
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Create the floating panel
+        let contentRect = NSRect(x: 0, y: 0, width: 480, height: 400)
+        panel = FloatingPanel(contentRect: contentRect)
+
+        // Set SwiftUI content
+        let contentView = ContentView()
+            .environmentObject(store)
+
+        panel.contentView = NSHostingView(rootView: contentView)
+
+        // Center and show
+        panel.center()
+        panel.orderFrontRegardless()
+
+        // Start data watching
+        store.startWatching()
+
+        // Hide dock icon — this is a floating utility
+        NSApp.setActivationPolicy(.accessory)
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        store.stopWatching()
     }
 }
