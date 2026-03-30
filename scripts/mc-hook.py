@@ -119,6 +119,12 @@ def get_git_info(project_root):
     remote = run(f"git -C '{project_root}' remote get-url origin 2>/dev/null") or ""
     last_msg = run(f"git -C '{project_root}' log -1 --format='%s' 2>/dev/null") or ""
 
+    # When no uncommitted changes, show the last commit's diff instead
+    # This is the common case after a Claude Code session commits its work
+    last_commit_diff = ""
+    if not diff_names.strip() and not staged_names.strip():
+        last_commit_diff = run(f"git -C '{project_root}' diff HEAD~1..HEAD -U2 2>/dev/null | head -120") or ""
+
     return (
         f"Project folder: {os.path.basename(project_root)}\n"
         f"Git remote: {remote}\n"
@@ -129,6 +135,7 @@ def get_git_info(project_root):
         f"Diff stats:\n{diff_content}\n"
         f"Actual code changes (diff snippet):\n{diff_snippet}\n"
         f"Staged changes:\n{staged_snippet}\n"
+        f"Last commit diff (if no uncommitted changes):\n{last_commit_diff}\n"
         f"New untracked files:\n{untracked}\n"
         f"Recently active files (last 10 min):\n{recent_files}"
     )
@@ -153,14 +160,21 @@ def ask_gemini(git_info):
         return {"status": "running", "task": "開發中...", "summary": "需要設定 GEMINI_API_KEY", "nextAction": ""}
 
     prompt = (
-        "你係一個 AI 工作記憶助手。你幫一個同時管理多個 AI coding agent 的開發者「回憶」每個 project 係到做緊乞。\n"
-        "他很容易忘記，因為他同時有 5±10 個 AI session 在跑。你的總結必須夠詳細，讓他一看就能回憶起脈絡。\n\n"
-        "根據以下 git 資訊，分析如下：\n"
-        "1. 主要看 uncommitted changes 和 diff snippet，這是此刻正在做的事\n"
-        "2. 結合 commit history 理解整體背景\n"
-        "3. 判斷狀態：running(運行中), blocked(需要人工介入), done(無未提交變更且無活躍檔案)\n\n"
+        "你係一個 AI 工作記憶助手。你幫一個同時管理多個 AI coding agent 的開發者「回憶」每個 project 做緊乜。\n"
+        "佢好容易忘記，因為佢同時有 5-10 個 AI session 在跑。你嘅總結要令佢一睇就記返起嚟。\n\n"
+        "分析規則：\n"
+        "1. 如果有 uncommitted changes 同 diff snippet → 呢個係此刻正在做嘅嘢，以此為主\n"
+        "2. 如果冇 uncommitted changes 但有 last commit diff → 呢個係最近剛做完嘅嘢，總結呢個 commit 做咗乜\n"
+        "3. 結合 commit history 理解整體背景\n"
+        "4. 判斷狀態：running(有未提交變更或近10分鐘有活躍檔案), done(冇未提交變更且冇活躍檔案), blocked(極少用，只有明確等待人工時)\n\n"
+        "寫 summary 嘅要求：\n"
+        "- 用人話講，唔好重複 git output 原文\n"
+        "- 講「做咗乜」而唔係「改咗邊個檔案」\n"
+        "- 好例子：「加咗 agent 狀態變化時嘅聲音提醒同 pill 閃動動畫，令用戶唔使不停 check」\n"
+        "- 壞例子：「正在修改 mc-update.sh 腳本，但具體修改內容未知」\n"
+        "- 如果真係睇唔出具體做咗乜，講最近嘅 commit messages 講咗乜\n\n"
         "用繁體中文回覆 JSON。不要加 markdown code block。\n"
-        '格式：{"status":"狀態","task":"具體任務描述，最多30字，要具體到功能名稱","summary":"詳細進度3-4句。要提及具體檔案名、功能模組、修改了什麼、為什麼修改。讓人一看就能回憶起來。","nextAction":"下一步要做什麼，要具體可執行"}\n\n'
+        '格式：{"status":"狀態","task":"具體任務描述，最多30字，要具體到功能名稱","summary":"詳細進度3-4句。用人話講做咗乜、點解做、而家到邊。","nextAction":"下一步要做什麼，要具體可執行"}\n\n'
         + git_info
     )
     body = json.dumps({
