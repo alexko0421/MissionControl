@@ -9,13 +9,11 @@ struct ContentView: View {
             CapsuleBar()
                 .zIndex(2)
 
-            CognitiveLoadBar(runningCount: store.runningCount)
-                .zIndex(2)
-
             // Expanded content (session list or summary) container
             // We use ZStack or just VStack to manage the emerging views so they render below CapsuleBar
             VStack(spacing: 0) {
                 if case .sessionList = store.viewState {
+                    CognitiveLoadBar(runningCount: store.runningCount)
                     SessionListPanel()
                         .transition(
                             .asymmetric(
