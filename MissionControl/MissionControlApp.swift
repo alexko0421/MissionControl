@@ -22,10 +22,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let contentRect = NSRect(x: 0, y: 0, width: 10, height: 10)
         panel = FloatingPanel(contentRect: contentRect)
 
-        // Transparent container — bypasses NSHostingView's opaque background
-        panel.contentView = makeTransparentHosting(
-            ContentView().environmentObject(store)
+        // Set SwiftUI content
+        let hostingView = NSHostingView(rootView:
+            ContentView()
+                .environmentObject(store)
         )
+        hostingView.translatesAutoresizingMaskIntoConstraints = false
+        panel.contentView = hostingView
 
         // Position near top-center of screen
         if let screen = NSScreen.main {

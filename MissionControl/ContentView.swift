@@ -4,9 +4,11 @@ struct ContentView: View {
     @EnvironmentObject var store: AgentStore
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 0) {
+            // The capsule widget
             CapsuleBar()
 
+            // Expanded content (session list or summary)
             if case .sessionList = store.viewState {
                 SessionListPanel()
                     .transition(.move(edge: .top).combined(with: .opacity))
@@ -24,35 +26,14 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Glass Capsule Background
-
-struct GlassCapsule: View {
-    var body: some View {
-        VisualEffectBlur(material: .hudWindow, blendingMode: .behindWindow)
-            .clipShape(Capsule())
-            .shadow(color: .black.opacity(0.2), radius: 12, y: 4)
-            .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
-    }
-}
-
-struct GlassRoundedRect: View {
-    var cornerRadius: CGFloat = 14
-
-    var body: some View {
-        VisualEffectBlur(material: .hudWindow, blendingMode: .behindWindow)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-            .shadow(color: .black.opacity(0.2), radius: 16, y: 6)
-            .shadow(color: .black.opacity(0.06), radius: 2, y: 1)
-    }
-}
-
-// MARK: - Capsule Bar
+// MARK: - Capsule Bar (always visible)
 
 struct CapsuleBar: View {
     @EnvironmentObject var store: AgentStore
 
     var body: some View {
         HStack(spacing: 10) {
+            // ☰ Menu button
             Button(action: { store.toggleSessionList() }) {
                 Image(systemName: store.isSessionListOpen ? "xmark" : "line.3.horizontal")
                     .font(.system(size: 12, weight: .medium))
@@ -63,17 +44,21 @@ struct CapsuleBar: View {
             .buttonStyle(.plain)
 
             if let agent = store.priorityAgent {
+                // Status dot
                 StatusDot(status: agent.status)
 
+                // Agent name
                 Text(agent.name)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.primary.opacity(0.85))
                     .lineLimit(1)
 
+                // Divider
                 RoundedRectangle(cornerRadius: 0.5)
-                    .fill(.primary.opacity(0.12))
+                    .fill(.primary.opacity(0.1))
                     .frame(width: 1, height: 14)
 
+                // Task (truncated)
                 Text(agent.task)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
@@ -87,17 +72,19 @@ struct CapsuleBar: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(GlassCapsule())
+        .background(.ultraThinMaterial, in: Capsule())
+        .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
+        .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
     }
 }
 
-// MARK: - Session List Panel
+// MARK: - Session List Panel (dropdown)
 
 struct SessionListPanel: View {
     @EnvironmentObject var store: AgentStore
 
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 4) {
             ForEach(store.sortedAgents) { agent in
                 SessionRow(agent: agent)
                     .onTapGesture {
@@ -106,7 +93,10 @@ struct SessionListPanel: View {
             }
         }
         .padding(8)
-        .background(GlassRoundedRect())
+        .frame(width: 340)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .shadow(color: .black.opacity(0.15), radius: 16, y: 6)
+        .padding(.top, 6)
     }
 }
 
@@ -147,14 +137,14 @@ struct SessionRow: View {
         .padding(.vertical, 7)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(.white.opacity(isHovered ? 0.08 : 0))
+                .fill(.primary.opacity(isHovered ? 0.06 : 0))
         )
         .onHover { isHovered = $0 }
         .contentShape(Rectangle())
     }
 }
 
-// MARK: - Summary Panel
+// MARK: - Summary Panel (expanded detail)
 
 struct SummaryPanel: View {
     let agent: Agent
@@ -162,6 +152,7 @@ struct SummaryPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // Header
             HStack {
                 StatusDot(status: agent.status)
                 Text(agent.name)
@@ -175,14 +166,18 @@ struct SummaryPanel: View {
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(.secondary)
                         .frame(width: 18, height: 18)
-                        .background(.white.opacity(0.08), in: Circle())
+                        .background(.primary.opacity(0.06), in: Circle())
                 }
                 .buttonStyle(.plain)
             }
 
+            // Task
             InfoBlock(label: "任務", text: agent.task)
+
+            // Summary
             InfoBlock(label: "摘要", text: agent.summary)
 
+            // Next action
             HStack(alignment: .top, spacing: 6) {
                 Image(systemName: "arrow.right")
                     .font(.system(size: 10, weight: .semibold))
@@ -195,10 +190,13 @@ struct SummaryPanel: View {
             }
             .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
+            .background(.primary.opacity(0.03), in: RoundedRectangle(cornerRadius: 8))
         }
         .padding(14)
-        .background(GlassRoundedRect())
+        .frame(width: 340)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .shadow(color: .black.opacity(0.15), radius: 16, y: 6)
+        .padding(.top, 6)
     }
 }
 
