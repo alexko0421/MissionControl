@@ -56,23 +56,34 @@ struct VisualEffectBlur: NSViewRepresentable {
     }
 }
 
-// MARK: - Transparent NSHostingView (removes default opaque background)
+// MARK: - Transparent container that hosts SwiftUI without any background
 
-class TransparentHostingView<Content: View>: NSHostingView<Content> {
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        // Remove the default opaque background added by NSHostingView
-        DispatchQueue.main.async {
-            self.removeOpaqueBackground(from: self)
+class TransparentContainerView: NSView {
+    override var isOpaque: Bool { false }
+    override func draw(_ dirtyRect: NSRect) {
+        // Draw nothing — fully transparent
+    }
+}
+
+func makeTransparentHosting<Content: View>(_ content: Content) -> NSView {
+    let container = TransparentContainerView()
+    container.wantsLayer = true
+    container.layer?.backgroundColor = .clear
+
+    let controller = NSHostingController(rootView: content)
+    controller.view.wantsLayer = true
+    controller.view.layer?.backgroundColor = .clear
+    controller.view.frame = container.bounds
+    controller.view.autoresizingMask = [.width, .height]
+
+    // Remove the default hosting view background
+    DispatchQueue.main.async {
+        controller.view.subviews.forEach { sub in
+            sub.wantsLayer = true
+            sub.layer?.backgroundColor = .clear
         }
     }
 
-    private func removeOpaqueBackground(from view: NSView) {
-        if let layer = view.layer {
-            layer.backgroundColor = .clear
-        }
-        for subview in view.subviews {
-            removeOpaqueBackground(from: subview)
-        }
-    }
+    container.addSubview(controller.view)
+    return container
 }
