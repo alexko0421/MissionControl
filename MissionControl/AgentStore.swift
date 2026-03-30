@@ -9,7 +9,6 @@ import Combine
 @MainActor
 class AgentStore: ObservableObject {
     @Published var agents: [Agent] = Agent.samples
-    @Published var selectedAgentId: String? = nil
 
     enum ViewState {
         case terminal
@@ -131,11 +130,6 @@ class AgentStore: ObservableObject {
     var runningCount: Int  { agents.filter { $0.status == .running }.count }
     var blockedCount: Int  { agents.filter { $0.status == .blocked }.count }
     var doneCount: Int     { agents.filter { $0.status == .done    }.count }
-
-    var selectedAgent: Agent? {
-        guard let id = selectedAgentId else { return nil }
-        return agents.first { $0.id == id }
-    }
 
     var priorityAgent: Agent? {
         // 1. First blocked agent (most recent)
