@@ -40,6 +40,7 @@ class AgentStore: ObservableObject {
                                 .appendingPathComponent(".mission-control")
     private var statusFile: URL { statusDir.appendingPathComponent("status.json") }
     private var fileSource: DispatchSourceFileSystemObject?
+    private var pollingTimer: Timer?
 
     // MARK: - Lifecycle
 
@@ -47,11 +48,44 @@ class AgentStore: ObservableObject {
         createStatusDirIfNeeded()
         loadFromFile()
         startFileWatcher()
+        startPolling()
     }
 
     func stopWatching() {
         fileSource?.cancel()
         fileSource = nil
+        stopPolling()
+    }
+
+    private func startPolling() {
+        pollingTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.pollTerminals()
+            }
+        }
+    }
+
+    private func stopPolling() {
+        pollingTimer?.invalidate()
+        pollingTimer = nil
+    }
+
+    private func pollTerminals() {
+        for i in agents.indices {
+            guard agents[i].status == .running,
+                  let target = agents[i].tmuxTarget else { continue }
+            Task.detached { [target] in
+                let lines = TMuxBridge.capturePane(target: target)
+                await MainActor.run { [weak self, lines] in
+                    guard let self = self,
+                          let idx = self.agents.firstIndex(where: { $0.tmuxTarget == target }) else { return }
+                    if !lines.isEmpty {
+                        self.agents[idx].terminalLines = lines
+                        self.agents[idx].updatedAt = Date()
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Status File
