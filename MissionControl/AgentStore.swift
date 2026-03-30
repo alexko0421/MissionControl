@@ -36,6 +36,16 @@ class AgentStore: ObservableObject {
     // Debounce: don't re-alert same agent within 5 seconds
     private var lastAlertTimes: [String: Date] = [:]
 
+    // Focus Mode — lock onto one agent, silence other alerts
+    @AppStorage("focusedAgentId") var focusedAgentId: String = ""
+
+    var isFocusModeActive: Bool { !focusedAgentId.isEmpty }
+
+    var focusedAgent: Agent? {
+        guard isFocusModeActive else { return nil }
+        return agents.first { $0.id == focusedAgentId }
+    }
+
     private let statusDir  = FileManager.default.homeDirectoryForCurrentUser
                                 .appendingPathComponent(".mission-control")
     private var statusFile: URL { statusDir.appendingPathComponent("status.json") }
@@ -136,6 +146,10 @@ class AgentStore: ObservableObject {
                        now.timeIntervalSince(lastAlert) < 5 {
                         continue
                     }
+                    // Focus mode: only alert for focused agent (or all if no focus)
+                    if isFocusModeActive && agent.id != focusedAgentId {
+                        continue
+                    }
                     lastAlertTimes[agent.id] = now
                     activeAlert = AgentAlert(
                         agentId: agent.id,
@@ -155,6 +169,17 @@ class AgentStore: ObservableObject {
                 self.agents = loaded
             }
             cleanupStaleAgents()
+
+            // Auto-exit focus if focused agent is done or gone
+            if isFocusModeActive {
+                if let focused = agents.first(where: { $0.id == focusedAgentId }) {
+                    if focused.status == .done {
+                        stopFocus()
+                    }
+                } else {
+                    stopFocus()
+                }
+            }
         } catch {
             print("AgentStore: failed to load status.json — \(error)")
         }
@@ -290,6 +315,18 @@ class AgentStore: ObservableObject {
     func dismissAlert() {
         withAnimation(.easeOut(duration: 0.3)) {
             activeAlert = nil
+        }
+    }
+
+    func startFocus(agentId: String) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            focusedAgentId = agentId
+        }
+    }
+
+    func stopFocus() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            focusedAgentId = ""
         }
     }
 }
