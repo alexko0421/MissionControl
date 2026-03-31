@@ -145,7 +145,7 @@ def get_app_language():
     """Read app language setting from UserDefaults."""
     try:
         result = subprocess.check_output(
-            ["defaults", "read", "com.yourcompany.MissionControl", "appLanguage"],
+            ["defaults", "read", "com.missioncontrol.app", "appLanguage"],
             stderr=subprocess.DEVNULL, timeout=3
         ).decode().strip()
         return result if result in ("En", "Zh") else "Zh"
@@ -312,6 +312,17 @@ def main():
             "tmuxWindow": tmux_window,
             "tmuxPane": tmux_pane,
         })
+
+    # Cleanup stale/duplicate entries before writing
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("mc_cleanup",
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "mc-cleanup.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        agents = mod.cleanup_agents(agents)
+    except:
+        pass
 
     with open(STATUS_FILE, "w") as f:
         json.dump(agents, f, ensure_ascii=False, indent=2)

@@ -73,9 +73,9 @@ class AgentStore: ObservableObject {
     private func startPolling() {
         pollingTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                // Run external scanners every ~15 seconds (every 5th poll)
+                // Run external scanners every ~6 seconds (every 2nd poll)
                 self?.scanCounter += 1
-                if self?.scanCounter ?? 0 >= 5 {
+                if self?.scanCounter ?? 0 >= 2 {
                     self?.scanCounter = 0
                     self?.runExternalScanners()
                 }
@@ -87,8 +87,9 @@ class AgentStore: ObservableObject {
 
     private func runExternalScanners() {
         let scanners = [
+            "mc-session-checker.py",
+            "mc-cleanup.py",
             "mc-antigravity-scanner.py",
-            "mc-codex-scanner.py",
         ]
         let scriptsDir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/MissionControl/scripts")
@@ -138,16 +139,30 @@ class AgentStore: ObservableObject {
             return nil
         }()
 
-        agents.removeAll { agent in
-            // Don't remove agent user is currently viewing
-            if agent.id == viewingAgentId { return false }
-
-            let age = now.timeIntervalSince(agent.updatedAt)
-            switch agent.status {
-            case .done:  return age > 3600      // 1 hour
-            case .idle:  return age > 86400     // 24 hours
-            default:     return false
+        // Auto-downgrade stale statuses
+        for i in agents.indices {
+            let age = now.timeIntervalSince(agents[i].updatedAt)
+            // done > 10 minutes → idle
+            if agents[i].status == .done && age > 600 {
+                agents[i].status = .idle
             }
+            // running/blocked > 1 hour → idle
+            if (agents[i].status == .running || agents[i].status == .blocked) && age > 3600 {
+                agents[i].status = .idle
+            }
+        }
+
+        agents.removeAll { agent in
+            if agent.id == viewingAgentId { return false }
+            let age = now.timeIntervalSince(agent.updatedAt)
+            // idle > 2 hours → remove
+            if agent.status == .idle && age > 7200 { return true }
+            return false
+        }
+
+        // Save cleanup back to file
+        if !agents.isEmpty {
+            saveToFile()
         }
     }
 
@@ -296,7 +311,8 @@ class AgentStore: ObservableObject {
             let ai = order.firstIndex(of: a.status) ?? 99
             let bi = order.firstIndex(of: b.status) ?? 99
             if ai != bi { return ai < bi }
-            return a.updatedAt > b.updatedAt
+            // Same status: sort by name for stability (no jumping)
+            return a.name < b.name
         }
     }
 

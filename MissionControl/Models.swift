@@ -98,6 +98,23 @@ struct Agent: Identifiable, Codable {
         guard let session = tmuxSession else { return nil }
         return "\(session):\(tmuxWindow ?? 0).\(tmuxPane ?? 0)"
     }
+
+    // MARK: - UI Helpers for Categorization
+    
+    var displayApp: String {
+        let appName = (app ?? "Terminal").trimmingCharacters(in: .whitespacesAndNewlines)
+        return appName.isEmpty ? "Terminal" : appName
+    }
+
+    var appIcon: String {
+        let name = displayApp.lowercased()
+        if name.contains("cursor") { return "cursorarrow.and.square.on.square.dashed" }
+        if name.contains("codex") || name.contains("code") { return "curlybraces" }
+        if name.contains("xcode") { return "hammer.fill" }
+        if name.contains("antigravity") { return "sparkles" }
+        if name.contains("claude") { return "brain.head.profile" }
+        return "terminal"
+    }
 }
 
 // MARK: - Sample Data

@@ -262,13 +262,39 @@ struct SessionListPanel: View {
                 .padding(.vertical, 24)
                 .frame(maxWidth: .infinity)
             } else {
-                ForEach(store.sortedAgents) { agent in
-                    SessionRow(agent: agent)
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.55, dampingFraction: 0.9)) {
-                                store.showSummary(for: agent.id)
-                            }
+                let groupedAgents = Dictionary(grouping: store.sortedAgents, by: { $0.displayApp })
+                let priorityOrder: [AgentStatus] = [.blocked, .running, .done, .idle]
+                let sortedKeys = groupedAgents.keys.sorted { a, b in
+                    let bestA = groupedAgents[a]!.compactMap { ag in priorityOrder.firstIndex(of: ag.status) }.min() ?? 99
+                    let bestB = groupedAgents[b]!.compactMap { ag in priorityOrder.firstIndex(of: ag.status) }.min() ?? 99
+                    if bestA != bestB { return bestA < bestB }
+                    return a < b
+                }
+
+                ForEach(sortedKeys, id: \.self) { appName in
+                    if let agents = groupedAgents[appName] {
+                        HStack(spacing: 6) {
+                            Image(systemName: agents[0].appIcon)
+                                .font(.system(size: 10))
+                            Text(appName.uppercased())
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .tracking(1)
+                            Spacer()
                         }
+                        .foregroundStyle(.white.opacity(0.35))
+                        .padding(.horizontal, 14)
+                        .padding(.top, 8)
+                        .padding(.bottom, 2)
+
+                        ForEach(agents) { agent in
+                            SessionRow(agent: agent)
+                                .onTapGesture {
+                                    withAnimation(.spring(response: 0.55, dampingFraction: 0.9)) {
+                                        store.showSummary(for: agent.id)
+                                    }
+                                }
+                        }
+                    }
                 }
             }
             
@@ -538,8 +564,29 @@ struct SettingsInlinePanel: View {
     @AppStorage("appLanguage") private var appLanguage = "Auto"
     @AppStorage("launchAtLogin") private var launchAtLogin = false
     @AppStorage("globalHotkey") private var globalHotkey = "⌥ Space"
+
+    private var geminiKeyFile: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".mission-control/gemini-key.txt")
+    }
+
+    private func syncApiKey() {
+        // Load from gemini-key.txt if AppStorage is empty
+        if apiKey.isEmpty, let key = try? String(contentsOf: geminiKeyFile, encoding: .utf8) {
+            let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { apiKey = trimmed }
+        }
+    }
+
+    private func saveApiKey() {
+        let dir = geminiKeyFile.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+            .write(to: geminiKeyFile, atomically: true, encoding: .utf8)
+    }
     
     @State private var selectedTab: String = "账户"
+    @State private var showApiKey = false
     @State private var isHoveringClose = false
     
     // Hotkey Recording States
@@ -609,7 +656,7 @@ struct SettingsInlinePanel: View {
     
     Spacer(minLength: 0)
 }
-.frame(width: 420, height: 240)
+.frame(width: 420, height: 260)
 .background(.ultraThinMaterial)
 .background(Color.black.opacity(0.3))
 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
@@ -620,6 +667,8 @@ struct SettingsInlinePanel: View {
 .padding(.bottom, 12)
 .environment(\.colorScheme, .dark)
 .onDisappear { stopRecording() }
+.onAppear { syncApiKey() }
+.onChange(of: apiKey) { _ in saveApiKey() }
 }
 
 // MARK: - Translation Helper
@@ -630,7 +679,7 @@ private func t(_ cnKey: String) -> String {
     case "系统": return isEn ? "System" : "系统"
     case "快捷键": return isEn ? "Hotkeys" : "快捷键"
     case "API KEY": return "API KEY"
-    case "Secret Token...": return isEn ? "Secret Token..." : "输入密钥..."
+    case "Secret Token...": return isEn ? "Paste Key Here..." : "在此粘贴 API 密钥..."
     case "该凭证已安全储存于本地钥匙串中，仅用作 AI 引擎推理。": 
         return isEn ? "This credential is securely stored in local keychain for AI inference." : "该凭证已安全储存于本地钥匙串中，仅用作 AI 引擎推理。"
     case "语言 (Language)": return isEn ? "Language" : "语言 (Language)"
@@ -640,6 +689,8 @@ private func t(_ cnKey: String) -> String {
     case "按下 ESC 键取消": return isEn ? "Press ESC to Cancel" : "按下 ESC 键取消"
     case "已设置": return isEn ? "Configured" : "已设置"
     case "点击上方按钮修改": return isEn ? "Click above to modify" : "点击上方按钮修改"
+    case "API_HINT_EMPTY": return isEn ? "Please paste your API Key to start." : "请在上方粘贴 API 密钥以激活"
+    case "API_HINT_SET": return isEn ? "API Key active. Type above to replace." : "密钥已启用。直接输入即可覆盖更新"
     default: return cnKey
     }
 }
@@ -702,25 +753,24 @@ private var accountTab: some View {
             .foregroundStyle(.white.opacity(0.4))
             .tracking(0.5)
         
-        HStack(spacing: 0) {
-            SecureField(t("Secret Token..."), text: $apiKey)
-                .textFieldStyle(.plain)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(.white)
-            
-            if !apiKey.isEmpty {
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 10))
-                    Text(t("已设置"))
-                        .font(.system(size: 10, weight: .bold))
-                }
-                .foregroundStyle(Color(red: 0.365, green: 0.792, blue: 0.647))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color(red: 0.365, green: 0.792, blue: 0.647).opacity(0.15))
-                .clipShape(Capsule())
+        HStack(spacing: 8) {
+            if showApiKey {
+                TextField(t("Secret Token..."), text: $apiKey)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white)
+            } else {
+                SecureField(t("Secret Token..."), text: $apiKey)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white)
             }
+            Button(action: { showApiKey.toggle() }) {
+                Image(systemName: showApiKey ? "eye.slash.fill" : "eye.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -730,6 +780,34 @@ private var accountTab: some View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
         )
+        
+        if apiKey.isEmpty {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11))
+                Text(t("API_HINT_EMPTY"))
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+            }
+            .foregroundStyle(Color(red: 0.937, green: 0.624, blue: 0.153))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color(red: 0.937, green: 0.624, blue: 0.153).opacity(0.15))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .padding(.top, 4)
+        } else {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 11))
+                Text(t("API_HINT_SET"))
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+            }
+            .foregroundStyle(Color(red: 0.365, green: 0.792, blue: 0.647))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color(red: 0.365, green: 0.792, blue: 0.647).opacity(0.15))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .padding(.top, 4)
+        }
         
         Text(t("该凭证已安全储存于本地钥匙串中，仅用作 AI 引擎推理。"))
             .font(.system(size: 11, weight: .regular, design: .rounded))

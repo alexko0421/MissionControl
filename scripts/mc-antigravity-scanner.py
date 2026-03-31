@@ -1,153 +1,159 @@
 #!/usr/bin/env python3
-"""Antigravity log scanner — polls Antigravity's logs to detect agent activity
-and writes status to ~/.mission-control/status.json.
+"""Antigravity scanner — simple, fast, real-time status detection.
 
-Designed to be called periodically (e.g. every 3-5 seconds) from MissionControl's polling loop.
+Checks if Antigravity's agent log is actively being written to.
+- Log growing right now → running
+- Log stopped growing recently → done
+- Log hasn't changed in a while → idle
 """
 
 import json
 import os
 import glob
 import hashlib
+import subprocess
 from datetime import datetime, timezone, timedelta
 
 STATUS_DIR = os.path.expanduser("~/.mission-control")
 STATUS_FILE = os.path.join(STATUS_DIR, "status.json")
 ANTIGRAVITY_LOGS = os.path.expanduser("~/Library/Application Support/Antigravity/logs")
-os.makedirs(STATUS_DIR, exist_ok=True)
-
-# Cache last scan position per log file
-SCAN_STATE_FILE = os.path.join(STATUS_DIR, "antigravity-scan-state.json")
+SIZE_CACHE = os.path.join(STATUS_DIR, "ag-size-cache.json")
 
 
-def get_latest_log_dir():
-    """Find the most recent Antigravity log directory."""
-    dirs = sorted(glob.glob(os.path.join(ANTIGRAVITY_LOGS, "*")))
-    return dirs[-1] if dirs else None
-
-
-def get_agent_log(log_dir):
-    """Find the Antigravity agent log file."""
-    # Check for the main agent log
-    candidates = [
-        os.path.join(log_dir, "window1", "exthost", "google.antigravity", "Antigravity.log"),
-    ]
-    # Also check for multiple windows
-    for i in range(1, 5):
-        candidates.append(
-            os.path.join(log_dir, f"window{i}", "exthost", "google.antigravity", "Antigravity.log")
-        )
-    return [c for c in candidates if os.path.exists(c)]
-
-
-def load_scan_state():
-    """Load previous scan positions."""
-    if os.path.exists(SCAN_STATE_FILE):
-        try:
-            with open(SCAN_STATE_FILE) as f:
-                return json.load(f)
-        except:
-            pass
-    return {}
-
-
-def save_scan_state(state):
-    """Save scan positions."""
-    with open(SCAN_STATE_FILE, "w") as f:
-        json.dump(state, f)
-
-
-def parse_log_tail(log_file, last_pos=0):
-    """Read new lines from log file since last position."""
+def is_antigravity_running():
     try:
-        size = os.path.getsize(log_file)
-        if size <= last_pos:
-            return [], last_pos
-        with open(log_file, "r", errors="replace") as f:
-            f.seek(max(0, last_pos))
-            lines = f.readlines()
-        return lines, size
+        return subprocess.run(["pgrep", "-f", "Antigravity"],
+            capture_output=True, timeout=3).returncode == 0
     except:
-        return [], last_pos
+        return False
 
 
-def detect_workspace(lines):
-    """Detect which workspace Antigravity is working in from log lines."""
-    workspace = None
-    for line in reversed(lines):
-        # Look for cd commands or file paths
-        if "Command completed:" in line and "cd " in line:
-            # Extract path from cd command
+def get_agent_logs():
+    """Find all active Antigravity agent logs."""
+    log_dir = sorted(glob.glob(os.path.join(ANTIGRAVITY_LOGS, "*")))
+    if not log_dir:
+        return []
+    latest = log_dir[-1]
+    return glob.glob(os.path.join(latest, "window*", "exthost",
+        "google.antigravity", "Antigravity.log"))
+
+
+def load_size_cache():
+    try:
+        with open(SIZE_CACHE) as f:
+            return json.load(f)
+    except:
+        return {}
+
+
+def save_size_cache(cache):
+    with open(SIZE_CACHE, "w") as f:
+        json.dump(cache, f)
+
+
+def get_workspace_from_log(log_file):
+    """Quick scan for workspace path from last few cd commands."""
+    try:
+        with open(log_file, "r", errors="replace") as f:
+            lines = f.readlines()[-30:]
+        for line in reversed(lines):
+            if "Command completed:" in line and "cd '" in line:
+                s = line.index("cd '") + 4
+                e = line.index("'", s)
+                return line[s:e].strip()
+    except:
+        pass
+    return None
+
+
+def get_last_command(log_file, max_age_minutes=10):
+    """Get the last meaningful terminal command from log, only if recent."""
+    now = datetime.now()
+    try:
+        with open(log_file, "r", errors="replace") as f:
+            lines = f.readlines()[-50:]
+        for line in reversed(lines):
+            if "[Terminal] Command completed:" in line:
+                # Check timestamp of this line
+                try:
+                    ts = datetime.strptime(line[:23], "%Y-%m-%d %H:%M:%S.%f")
+                    if (now - ts).total_seconds() > max_age_minutes * 60:
+                        return None  # too old
+                except:
+                    pass
+                try:
+                    s = line.index("Command completed: ") + len("Command completed: ")
+                    e = line.index(" exit code", s)
+                    cmd = line[s:e].strip()
+                    if cmd and not cmd.startswith("cd "):
+                        return cmd[:60]
+                except:
+                    pass
+    except:
+        pass
+    return None
+
+
+def main():
+    if not is_antigravity_running():
+        # Antigravity not running — remove all AG entries
+        if os.path.exists(STATUS_FILE):
             try:
-                idx = line.index("cd '") + 4 if "cd '" in line else line.index("cd ") + 3
-                end = line.index("'", idx) if "cd '" in line else line.index(" exit", idx)
-                path = line[idx:end].strip()
-                if path and path != "/":
-                    workspace = path
+                with open(STATUS_FILE) as f:
+                    agents = json.load(f)
+                agents = [a for a in agents if a.get("app") != "Antigravity"]
+                with open(STATUS_FILE, "w") as f:
+                    json.dump(agents, f, ensure_ascii=False, indent=2)
             except:
                 pass
-    return workspace
+        return
 
+    log_files = get_agent_logs()
+    if not log_files:
+        return
 
-def detect_status(lines):
-    """Detect agent status from recent log lines.
+    size_cache = load_size_cache()
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    Returns: (status, task_hint)
-    """
-    if not lines:
-        return "idle", None
+    # Check each log: is it growing?
+    active_workspaces = {}
 
-    recent = lines[-30:]  # Look at last 30 lines
+    for log_file in log_files:
+        try:
+            current_size = os.path.getsize(log_file)
+            mtime = os.path.getmtime(log_file)
+        except:
+            continue
 
-    has_planner = False
-    has_terminal_cmd = False
-    has_error = False
-    last_cmd = None
-    last_activity_time = None
-    is_stopped = False
+        prev_size = size_cache.get(log_file, 0)
+        size_cache[log_file] = current_size
 
-    for line in recent:
-        if "planner_generator" in line:
-            has_planner = True
-        if "[Terminal] Command completed:" in line:
-            has_terminal_cmd = True
-            try:
-                cmd_start = line.index("Command completed: ") + len("Command completed: ")
-                cmd_end = line.index(" exit code", cmd_start)
-                last_cmd = line[cmd_start:cmd_end].strip()
-            except:
-                pass
-        if "executor is not currently running" in line:
-            is_stopped = True
-        if "non-terminal status: CORTEX_STEP_STATUS_RUNNING" in line:
-            has_planner = True
-        if "Error" in line or "error" in line:
-            has_error = True
+        age_seconds = datetime.now().timestamp() - mtime
 
-        # Extract timestamp
-        if line.startswith("2026-"):
-            try:
-                ts_str = line[:23]
-                last_activity_time = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S.%f")
-            except:
-                pass
+        # Determine status
+        if current_size > prev_size and age_seconds < 10:
+            status = "running"  # actively writing right now
+        elif age_seconds < 120:
+            status = "running"  # wrote recently
+        elif age_seconds < 600:
+            status = "done"     # stopped within 10 min
+        else:
+            status = "idle"
 
-    # Determine status based on ALL lines (not just new ones)
-    if is_stopped and not has_planner:
-        return "done", last_cmd
-    if has_planner or has_terminal_cmd:
-        # Check if activity is recent
-        if last_activity_time:
-            age = datetime.now() - last_activity_time
-            if age > timedelta(minutes=5):
-                return "idle", last_cmd
-        return "running", last_cmd
+        ws = get_workspace_from_log(log_file) or "Antigravity"
+        ws_name = os.path.basename(ws)
 
-    return "idle", None
+        # Keep best (most active) status per workspace
+        if ws not in active_workspaces or status == "running":
+            active_workspaces[ws] = {
+                "ws_name": ws_name,
+                "status": status,
+                "last_command": get_last_command(log_file),
+            }
 
+    save_size_cache(size_cache)
 
-def update_status_file(agent_id, name, status, task, workspace):
-    """Update or add agent entry in status.json."""
+    # Update status.json
     agents = []
     if os.path.exists(STATUS_FILE):
         try:
@@ -156,93 +162,44 @@ def update_status_file(agent_id, name, status, task, workspace):
         except:
             agents = []
 
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # Remove old Antigravity entries
+    agents = [a for a in agents if a.get("app") != "Antigravity"]
 
-    found = False
-    for i, a in enumerate(agents):
-        if a["id"] == agent_id:
-            # Only update if status changed or task changed
-            if a.get("status") != status or a.get("task") != task:
-                agents[i].update({
-                    "status": status,
-                    "task": task or agents[i].get("task", ""),
-                    "updatedAt": now,
-                    "app": "Antigravity",
-                })
-            found = True
-            break
+    # Merge all workspaces into ONE entry — pick the most active
+    if active_workspaces:
+        best_ws = min(active_workspaces.keys(),
+                      key=lambda w: ["running", "done", "idle"].index(active_workspaces[w]["status"])
+                      if active_workspaces[w]["status"] in ["running", "done", "idle"] else 99)
+        info = active_workspaces[best_ws]
 
-    if not found:
-        agents.append({
-            "id": agent_id,
-            "name": name,
-            "status": status,
-            "task": task or "Working...",
-            "summary": "",
-            "terminalLines": [],
-            "nextAction": "",
-            "updatedAt": now,
-            "worktree": workspace,
-            "app": "Antigravity",
-            "tmuxSession": None,
-            "tmuxWindow": 0,
-            "tmuxPane": 0,
-        })
+        # Only show if agent is actually doing something (not idle)
+        if info["status"] != "idle":
+            last_cmd = info.get("last_command")
+            if last_cmd:
+                task = last_cmd
+                summary = f"Workspace: {info['ws_name']}"
+            else:
+                task = f"{info['ws_name']} — agent active"
+                summary = "Gemini agent"
+
+            agents.append({
+                "id": "ag-antigravity",
+                "name": "Antigravity",
+                "status": info["status"],
+                "task": task,
+                "summary": summary,
+                "terminalLines": [],
+                "nextAction": "",
+                "updatedAt": now,
+                "worktree": best_ws,
+                "app": "Antigravity",
+                "tmuxSession": None,
+                "tmuxWindow": 0,
+                "tmuxPane": 0,
+            })
 
     with open(STATUS_FILE, "w") as f:
         json.dump(agents, f, ensure_ascii=False, indent=2)
-
-
-def main():
-    log_dir = get_latest_log_dir()
-    if not log_dir:
-        return
-
-    log_files = get_agent_log(log_dir)
-    if not log_files:
-        return
-
-    scan_state = load_scan_state()
-
-    for log_file in log_files:
-        last_pos = scan_state.get(log_file, 0)
-        # First scan: read last 100 lines for initial state
-        if last_pos == 0:
-            try:
-                with open(log_file, "r", errors="replace") as f:
-                    all_lines = f.readlines()
-                lines = all_lines[-100:] if len(all_lines) > 100 else all_lines
-                new_pos = os.path.getsize(log_file)
-            except:
-                lines, new_pos = [], 0
-        else:
-            lines, new_pos = parse_log_tail(log_file, last_pos)
-        scan_state[log_file] = new_pos
-
-        if not lines:
-            continue
-
-        # Detect workspace and status
-        workspace = detect_workspace(lines) or "Antigravity"
-        status, task_hint = detect_status(lines)
-
-        # Generate agent ID from workspace path
-        ws_name = os.path.basename(workspace) if workspace != "Antigravity" else "Antigravity"
-        agent_id = "ag-" + hashlib.md5(log_file.encode()).hexdigest()[:6]
-
-        # Build task description
-        if task_hint:
-            task = task_hint[:60]
-        elif status == "running":
-            task = "Agent working..."
-        elif status == "done":
-            task = "Task completed"
-        else:
-            task = "Idle"
-
-        update_status_file(agent_id, f"Antigravity ({ws_name})", status, task, workspace)
-
-    save_scan_state(scan_state)
 
 
 if __name__ == "__main__":
