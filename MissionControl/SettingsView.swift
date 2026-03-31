@@ -19,7 +19,7 @@ struct SettingsView: View {
                 }
                 .tag(Tabs.general)
         }
-        .frame(width: 450, height: 250)
+        .frame(width: 450, height: 280)
     }
 }
 
@@ -37,6 +37,12 @@ struct ConnectionSettingsView: View {
                 SecureField("API Token:", text: $apiKey)
                     .textFieldStyle(.roundedBorder)
                     .help("Authentication token for secure API access.")
+                
+                if !apiKey.isEmpty {
+                    Text("✅ 你已經設定咗 API 鎖匙。如需更改，請直接在上方輸入。")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
             
             Divider()
@@ -90,7 +96,7 @@ class SettingsWindowController {
     func show() {
         if window == nil {
             let win = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 450, height: 250),
+                contentRect: NSRect(x: 0, y: 0, width: 450, height: 280),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false

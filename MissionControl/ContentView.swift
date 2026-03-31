@@ -638,6 +638,7 @@ private func t(_ cnKey: String) -> String {
     case "请键入快捷键": return isEn ? "Type Shortcut..." : "请键入快捷键"
     case "无": return isEn ? "None" : "无"
     case "按下 ESC 键取消": return isEn ? "Press ESC to Cancel" : "按下 ESC 键取消"
+    case "已设置": return isEn ? "Configured" : "已设置"
     case "点击上方按钮修改": return isEn ? "Click above to modify" : "点击上方按钮修改"
     default: return cnKey
     }
@@ -701,18 +702,34 @@ private var accountTab: some View {
             .foregroundStyle(.white.opacity(0.4))
             .tracking(0.5)
         
-        SecureField(t("Secret Token..."), text: $apiKey)
-            .textFieldStyle(.plain)
-            .font(.system(size: 14, weight: .medium, design: .rounded))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(Color.white.opacity(0.06))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
-            )
+        HStack(spacing: 0) {
+            SecureField(t("Secret Token..."), text: $apiKey)
+                .textFieldStyle(.plain)
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundStyle(.white)
+            
+            if !apiKey.isEmpty {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 10))
+                    Text(t("已设置"))
+                        .font(.system(size: 10, weight: .bold))
+                }
+                .foregroundStyle(Color(red: 0.365, green: 0.792, blue: 0.647))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color(red: 0.365, green: 0.792, blue: 0.647).opacity(0.15))
+                .clipShape(Capsule())
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+        )
         
         Text(t("该凭证已安全储存于本地钥匙串中，仅用作 AI 引擎推理。"))
             .font(.system(size: 11, weight: .regular, design: .rounded))
