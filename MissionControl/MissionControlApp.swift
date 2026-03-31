@@ -56,11 +56,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
-            // 使用「sparkles」图标（非常适合 AI/智能助理工具），加入 SymbolConfiguration 令线修加粗和变大，质感更靓
-            if let image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: "MissionControl") {
-                let config = NSImage.SymbolConfiguration(pointSize: 15, weight: .semibold, scale: .medium)
-                button.image = image.withSymbolConfiguration(config)
-            }
+            button.image = NSImage(systemSymbolName: "target", accessibilityDescription: "MissionControl")
             button.toolTip = "MissionControl"
         }
         
