@@ -56,15 +56,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
-            button.image = NSImage(systemImageName: "target")
+            // 使用「sparkles」图标（非常适合 AI/智能助理工具），加入 SymbolConfiguration 令线修加粗和变大，质感更靓
+            if let image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: "MissionControl") {
+                let config = NSImage.SymbolConfiguration(pointSize: 15, weight: .semibold, scale: .medium)
+                button.image = image.withSymbolConfiguration(config)
+            }
             button.toolTip = "MissionControl"
         }
         
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "显示主面板 (Show Dashboard)", action: #selector(showDashboard), keyEquivalent: "m"))
-        menu.addItem(NSMenuItem(title: "设置... (Settings)", action: #selector(openSettings), keyEquivalent: ","))
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "关于 MissionControl...", action: #selector(showAbout), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "显示主面板 (Show)", action: #selector(showDashboard), keyEquivalent: "m"))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "退出 (Quit)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         
