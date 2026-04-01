@@ -58,7 +58,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let button = statusItem?.button {
             button.image = nil
             button.title = "M"
-            button.font = .systemFont(ofSize: 14, weight: .black)
+            
+            let systemFont = NSFont.systemFont(ofSize: 15, weight: .black)
+            if let roundedDesc = systemFont.fontDescriptor.withDesign(.rounded) {
+                button.font = NSFont(descriptor: roundedDesc, size: 15)
+            } else {
+                button.font = systemFont
+            }
+            
             button.toolTip = "MissionControl"
         }
         
