@@ -68,6 +68,8 @@ struct ContentView: View {
 struct CapsuleBar: View {
     @EnvironmentObject var store: AgentStore
     @State private var isMenuHovered = false
+    @AppStorage("appLanguage") private var appLanguage = "Auto"
+    private var isEn: Bool { appLanguage == "En" }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -132,7 +134,7 @@ struct CapsuleBar: View {
                         Image(systemName: "moon.zzz.fill")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(.white.opacity(0.8))
-                        Text("Idle")
+                        Text(isEn ? "Idle" : "待命中")
                             .font(.system(size: 12, weight: .semibold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.8))
                     }
@@ -144,7 +146,7 @@ struct CapsuleBar: View {
                         Capsule().stroke(Color.white.opacity(0.1), lineWidth: 0.5)
                     )
 
-                    Text("Waiting for task...")
+                    Text(isEn ? "Waiting for task..." : "等待任务中...")
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(.white.opacity(0.4))
                         .padding(.leading, 4)

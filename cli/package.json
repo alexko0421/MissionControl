@@ -1,0 +1,34 @@
+{
+  "name": "mission-control-ai",
+  "version": "1.0.0",
+  "description": "A macOS floating dashboard that monitors multiple AI coding sessions in real time",
+  "bin": {
+    "mission-control-ai": "./bin/cli.mjs"
+  },
+  "type": "module",
+  "license": "MIT",
+  "author": "Ko Chunlong",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexko0421/MissionControl"
+  },
+  "keywords": [
+    "mission-control",
+    "ai",
+    "claude-code",
+    "claude",
+    "codex",
+    "antigravity",
+    "conductor",
+    "dashboard",
+    "macos",
+    "developer-tools"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin/",
+    "hooks/"
+  ]
+}

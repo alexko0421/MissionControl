@@ -1,16 +1,51 @@
 # Mission Control
 
-A macOS floating dashboard that monitors multiple AI coding sessions in real time.
+<p align="center">
+  <img src="PerfectGeometric_M.png" width="128" alt="Mission Control" />
+</p>
 
-Supports **Claude Code** (Terminal / Conductor), **Antigravity**, **Codex**, and more.
+<p align="center">
+  A macOS floating dashboard that monitors multiple AI coding sessions in real time.
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#features">Features</a> •
+  <a href="#supported-apps">Supported Apps</a> •
+  <a href="#architecture">Architecture</a> •
+  <a href="#build-from-source">Build from Source</a>
+</p>
+
+---
+
+## Quick Start
+
+**1. Install hooks for Claude Code:**
+
+```bash
+npx mission-control-ai setup
+```
+
+**2. Download the app** from [Releases](https://github.com/alexko0421/MissionControl/releases) and run it.
+
+That's it. Your AI coding sessions will appear in Mission Control automatically.
 
 ## Features
 
-- Real-time status tracking for all AI sessions (Running / Needs You / Done / Idle)
-- Click the capsule bar or session detail to jump directly to the corresponding app
-- Floats across all desktop spaces — always visible
-- Orange border pulse + sound alert when a session needs your attention
-- Focus Mode: lock onto a single session and silence other alerts
+- **Real-time status tracking** — Running / Needs You / Done / Idle
+- **Click to jump** — click any session to switch to its app and window
+- **Floats across all Spaces** — always visible, never in the way
+- **Alert pulse** — orange border + sound when a session needs your attention
+- **Focus Mode** — lock onto one session, silence other alerts
+- **Multi-language** — English and Chinese
+
+## Supported Apps
+
+| App | Detection |
+|-----|-----------|
+| **Claude Code** (Terminal / Conductor) | Hooks (automatic via `npx mission-control-ai setup`) |
+| **Antigravity** | Log scanning (`~/Library/Application Support/Antigravity/logs/`) |
+| **Codex** | SQLite scanning (`~/.codex/state_5.sqlite`) |
 
 ## Architecture
 
@@ -28,55 +63,40 @@ Mission Control is **not an agent** — it's a **command center**:
  (Hooks)   (Hooks)   (Log scan)  (DB scan)
 ```
 
-## File Structure
+## CLI Commands
 
-```
-MissionControl/
-├── MissionControlApp.swift   — App entry point
-├── Models.swift              — Data models (Agent, AgentStatus, TerminalLine)
-├── AgentStore.swift          — Data store: file watching, polling, external scanners
-├── FloatingPanel.swift       — Floating window configuration
-├── ContentView.swift         — UI: Capsule Bar, Session List, Summary, Settings
-├── SharedComponents.swift    — Shared components (StatusDot, AlertPulse)
-├── SettingsView.swift        — Settings panel
-└── TMuxBridge.swift          — tmux CLI wrapper
-
-scripts/
-├── mc-claude-hook.py         — Claude Code Stop hook (AI summarization)
-├── mc-prompt-hook.py         — Claude Code UserPromptSubmit hook
-├── mc-pretool-hook.py        — Claude Code PreToolUse hook (detects approval wait)
-├── mc-posttool-hook.py       — Claude Code PostToolUse hook
-├── mc-antigravity-scanner.py — Antigravity log scanner
-└── mc-codex-scanner.py       — Codex SQLite scanner
+```bash
+npx mission-control-ai setup       # Install hooks for Claude Code
+npx mission-control-ai uninstall   # Remove hooks
+npx mission-control-ai status      # Show current session status
 ```
 
-## Status Tracking
+### What `setup` does
 
-### Claude Code (Terminal / Conductor)
-
-Configured via hooks in `~/.claude/settings.json`:
+1. Copies hook scripts to `~/.mission-control/hooks/`
+2. Configures `~/.claude/settings.json` with four hooks:
 
 | Hook | Trigger | Sets Status |
 |------|---------|-------------|
 | `UserPromptSubmit` | User sends a message | → `running` |
 | `PreToolUse` | Claude wants to use a tool (may need approval) | → `blocked` |
 | `PostToolUse` | Tool execution complete | → `running` |
-| `Stop` | Claude finishes responding | → AI summarizer decides |
+| `Stop` | Claude finishes responding | → AI-summarized status |
 
-### Antigravity
+## Build from Source
 
-Scans `~/Library/Application Support/Antigravity/logs/` every 15 seconds to infer agent status.
+```bash
+git clone https://github.com/alexko0421/MissionControl.git
+cd MissionControl
+open MissionControl.xcodeproj
+```
 
-### Codex
-
-Reads `~/.codex/state_5.sqlite` threads table every 15 seconds to get session status.
+Build & Run in Xcode (requires macOS 14.0+).
 
 ## Status File
 
 All statuses are aggregated into `~/.mission-control/status.json`. The app polls every 3 seconds, updating the UI only when data changes.
 
-## Setup
+## License
 
-1. Open `MissionControl.xcodeproj` in Xcode
-2. Build & Run
-3. Configure hooks in `~/.claude/settings.json` (see `scripts/` directory)
+[MIT](LICENSE) — Ko Chunlong
