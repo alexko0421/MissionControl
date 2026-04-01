@@ -56,16 +56,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
-            button.image = nil
-            button.title = "M"
-            
-            let systemFont = NSFont.systemFont(ofSize: 15, weight: .black)
-            if let roundedDesc = systemFont.fontDescriptor.withDesign(.rounded) {
-                button.font = NSFont(descriptor: roundedDesc, size: 15)
-            } else {
-                button.font = systemFont
-            }
-            
+            button.title = ""
+            button.image = makeMImage()
+            button.imageScaling = .scaleProportionallyDown
             button.toolTip = "MissionControl"
         }
         
@@ -83,6 +76,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettings() {
         SettingsWindowController.shared.show()
+    }
+
+    /// Renders a bold rounded "M" as a template NSImage sized for the menu bar.
+    /// Using an image (rather than button.title) guarantees perfect vertical
+    /// alignment with every other icon on the bar.
+    private func makeMImage() -> NSImage {
+        // Menu bar icons are drawn at 18pt; @2x = 36px
+        let size = NSSize(width: 18, height: 18)
+        let image = NSImage(size: size, flipped: false) { rect in
+            let fontSize: CGFloat = 16
+            let sysFont = NSFont.systemFont(ofSize: fontSize, weight: .black)
+            let font: NSFont
+            if let desc = sysFont.fontDescriptor.withDesign(.rounded) {
+                font = NSFont(descriptor: desc, size: fontSize) ?? sysFont
+            } else {
+                font = sysFont
+            }
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: NSColor.black  // template image; macOS will tint automatically
+            ]
+            let str = "M" as NSString
+            let strSize = str.size(withAttributes: attrs)
+            let pt = NSPoint(
+                x: (rect.width  - strSize.width)  / 2,
+                y: (rect.height - strSize.height) / 2
+            )
+            str.draw(at: pt, withAttributes: attrs)
+            return true
+        }
+        // Mark as template so macOS auto-tints it for light / dark menu bar
+        image.isTemplate = true
+        return image
     }
 
     @objc private func showAbout() {
