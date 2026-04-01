@@ -45,8 +45,6 @@ That's it. Your AI coding sessions will appear in Mission Control automatically.
 |-----|-----------|
 | **Terminal** | Hooks (automatic via `npx mission-control-ai setup`) |
 | **Conductor** | Hooks (automatic via `npx mission-control-ai setup`) |
-| **Antigravity** | Log scanning (`~/Library/Application Support/Antigravity/logs/`) |
-| **Codex** | SQLite scanning (`~/.codex/state_5.sqlite`) |
 
 ## Architecture
 
