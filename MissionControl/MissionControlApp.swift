@@ -56,7 +56,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "target", accessibilityDescription: "MissionControl")
+            button.image = nil
+            button.title = "M"
+            button.font = .systemFont(ofSize: 14, weight: .black)
             button.toolTip = "MissionControl"
         }
         
