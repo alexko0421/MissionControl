@@ -191,13 +191,35 @@ struct CapsuleBar: View {
 
     private func jumpToPriorityAgent(agent: Agent) {
         let appName = agent.app ?? "Terminal"
-        let workspace = NSWorkspace.shared
-        if let app = workspace.runningApplications.first(where: {
-            $0.localizedName == appName || $0.bundleIdentifier?.localizedCaseInsensitiveContains(appName.lowercased()) == true
-        }) {
-            app.activate()
-        } else {
-            workspace.open(URL(fileURLWithPath: "/Applications/\(appName).app"))
+        let dirName = ((agent.worktree ?? "") as NSString).lastPathComponent
+        let agentName = agent.name
+
+        Task.detached {
+            if appName == "Terminal" {
+                let script = """
+                tell application "Terminal"
+                    repeat with w in windows
+                        set winName to name of w
+                        if winName contains "\(dirName)" or winName contains "\(agentName)" then
+                            set index of w to 1
+                            activate
+                            return
+                        end if
+                    end repeat
+                    activate
+                end tell
+                """
+                SummaryPanel.runAppleScript(script)
+            } else {
+                await MainActor.run {
+                    let workspace = NSWorkspace.shared
+                    if let app = workspace.runningApplications.first(where: {
+                        $0.localizedName == appName || $0.bundleIdentifier?.localizedCaseInsensitiveContains(appName.lowercased()) == true
+                    }) {
+                        app.activate()
+                    }
+                }
+            }
         }
     }
 }
@@ -500,22 +522,71 @@ struct SummaryPanel: View {
             return
         }
 
-        // Activate the app this agent is running in
+        // Find the correct window and activate it
         let appName = agent.app ?? "Terminal"
+        let agentName = agent.name
+        let worktree = agent.worktree ?? ""
+        let dirName = (worktree as NSString).lastPathComponent
 
-        Task { @MainActor in
-            let workspace = NSWorkspace.shared
-            if let app = workspace.runningApplications.first(where: {
-                $0.localizedName == appName || $0.bundleIdentifier?.localizedCaseInsensitiveContains(appName.lowercased()) == true
-            }) {
-                app.activate()
+        Task.detached {
+            if appName == "Terminal" {
+                // Search Terminal windows by title for matching agent
+                let script = """
+                tell application "Terminal"
+                    repeat with w in windows
+                        set winName to name of w
+                        if winName contains "\(dirName)" or winName contains "\(agentName)" then
+                            set index of w to 1
+                            activate
+                            return true
+                        end if
+                    end repeat
+                    activate
+                end tell
+                return false
+                """
+                Self.runAppleScript(script)
+            } else if appName == "Conductor" {
+                // Conductor: try to find matching window, fall back to activate
+                let script = """
+                tell application "System Events"
+                    if exists process "conductor" then
+                        tell process "conductor"
+                            repeat with w in windows
+                                if name of w contains "\(dirName)" or name of w contains "\(agentName)" then
+                                    perform action "AXRaise" of w
+                                    set frontmost to true
+                                    return true
+                                end if
+                            end repeat
+                            set frontmost to true
+                        end tell
+                    end if
+                end tell
+                """
+                Self.runAppleScript(script)
+                // Also activate via NSWorkspace as backup
+                await MainActor.run {
+                    if let app = NSWorkspace.shared.runningApplications.first(where: {
+                        $0.localizedName == appName || $0.bundleIdentifier?.localizedCaseInsensitiveContains(appName.lowercased()) == true
+                    }) {
+                        app.activate()
+                    }
+                }
             } else {
-                workspace.open(URL(fileURLWithPath: "/Applications/\(appName).app"))
+                await MainActor.run {
+                    let workspace = NSWorkspace.shared
+                    if let app = workspace.runningApplications.first(where: {
+                        $0.localizedName == appName || $0.bundleIdentifier?.localizedCaseInsensitiveContains(appName.lowercased()) == true
+                    }) {
+                        app.activate()
+                    }
+                }
             }
         }
     }
 
-    private static func runAppleScript(_ script: String) {
+    static func runAppleScript(_ script: String) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
         process.arguments = ["-e", script]
@@ -523,7 +594,7 @@ struct SummaryPanel: View {
         process.waitUntilExit()
     }
 
-    private static func runAppleScriptReturningBool(_ script: String) -> Bool {
+    static func runAppleScriptReturningBool(_ script: String) -> Bool {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
         process.arguments = ["-e", script]

@@ -38,9 +38,25 @@ if not API_KEY:
         API_KEY = open(key_file).read().strip()
 
 def get_project_name(cwd):
-    """Get a readable project name from the working directory."""
+    """Get a readable project name from the working directory.
+    Tries git branch name first (more descriptive), falls back to directory name.
+    """
     if not cwd:
         return "Unknown"
+    # Try git branch name
+    try:
+        branch = subprocess.check_output(
+            ["git", "-C", cwd, "branch", "--show-current"],
+            stderr=subprocess.DEVNULL, timeout=3
+        ).decode().strip()
+        if branch:
+            # Clean up: remove username prefix like "alexko0421/"
+            if "/" in branch:
+                branch = branch.split("/", 1)[1]
+            # Convert kebab-case to readable: "fix-security-audit-v1" → "fix security audit v1"
+            return branch.replace("-", " ").replace("_", " ")
+    except:
+        pass
     return os.path.basename(cwd)
 
 def detect_app():

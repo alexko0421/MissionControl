@@ -9,11 +9,26 @@ import json
 import os
 import sys
 import hashlib
+import subprocess
 from datetime import datetime, timezone
 
 STATUS_DIR = os.path.expanduser("~/.mission-control")
 STATUS_FILE = os.path.join(STATUS_DIR, "status.json")
 os.makedirs(STATUS_DIR, exist_ok=True)
+
+def _get_name(cwd):
+    try:
+        branch = subprocess.check_output(
+            ["git", "-C", cwd, "branch", "--show-current"],
+            stderr=subprocess.DEVNULL, timeout=3
+        ).decode().strip()
+        if branch:
+            if "/" in branch:
+                branch = branch.split("/", 1)[1]
+            return branch.replace("-", " ").replace("_", " ")
+    except:
+        pass
+    return os.path.basename(cwd)
 
 def main():
     try:
@@ -50,7 +65,7 @@ def main():
         # Agent not found yet — create a minimal entry
         agents.append({
             "id": agent_id,
-            "name": os.path.basename(cwd),
+            "name": _get_name(cwd),
             "status": "running",
             "task": "處理中...",
             "summary": "",

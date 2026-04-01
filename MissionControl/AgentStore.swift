@@ -89,7 +89,6 @@ class AgentStore: ObservableObject {
         let scanners = [
             "mc-session-checker.py",
             "mc-cleanup.py",
-            "mc-antigravity-scanner.py",
         ]
         let scriptsDir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/MissionControl/scripts")
