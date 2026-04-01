@@ -56,10 +56,10 @@ Mission Control is **not an agent** — it's a **command center**:
 │  Reads ~/.mission-control/status.json │
 └──────────┬───────────────────────────┘
            │ reads status
-     ┌─────┼──────────┬────────────┐
-     ▼     ▼          ▼            ▼
- Terminal  Conductor  Antigravity  Codex
- (Hooks)   (Hooks)   (Log scan)  (DB scan)
+     ┌─────┴──────────┐
+     ▼                ▼
+ Terminal          Conductor
+ (Hooks)           (Hooks)
 ```
 
 ## CLI Commands
