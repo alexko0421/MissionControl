@@ -43,7 +43,8 @@ That's it. Your AI coding sessions will appear in Mission Control automatically.
 
 | App | Detection |
 |-----|-----------|
-| **Claude Code** (Terminal / Conductor) | Hooks (automatic via `npx mission-control-ai setup`) |
+| **Terminal** | Hooks (automatic via `npx mission-control-ai setup`) |
+| **Conductor** | Hooks (automatic via `npx mission-control-ai setup`) |
 | **Antigravity** | Log scanning (`~/Library/Application Support/Antigravity/logs/`) |
 | **Codex** | SQLite scanning (`~/.codex/state_5.sqlite`) |
 
