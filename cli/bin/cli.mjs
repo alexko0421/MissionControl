@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
-import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync, readdirSync, unlinkSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -12,6 +13,8 @@ const HOOKS_SRC = join(__dirname, '..', 'hooks');
 const MC_DIR = join(homedir(), '.mission-control');
 const HOOKS_DEST = join(MC_DIR, 'hooks');
 const CLAUDE_SETTINGS = join(homedir(), '.claude', 'settings.json');
+const APP_PATH = '/Applications/MissionControl.app';
+const DOWNLOAD_URL = 'https://github.com/alexko0421/MissionControl/releases/latest/download/MissionControl.zip';
 
 const HOOK_FILES = [
   'mc-claude-hook.py',
@@ -71,25 +74,51 @@ const HOOK_CONFIG = {
 
 function printHelp() {
   console.log(`
-  Mission Control AI — monitor AI coding sessions in real time
+  Mission Control — monitor AI coding sessions in real time
 
   Usage:
-    npx mission-control-ai setup      Install hooks for Claude Code
-    npx mission-control-ai uninstall   Remove hooks
+    npx mission-control-ai setup      Install app + hooks
+    npx mission-control-ai uninstall   Remove app + hooks
     npx mission-control-ai status      Show current session status
     npx mission-control-ai help        Show this help
   `);
 }
 
-function setup() {
-  console.log('\n  🚀 Mission Control AI — Setup\n');
+function installApp() {
+  if (existsSync(APP_PATH)) {
+    console.log('  ✓ Mission Control app already installed');
+    return true;
+  }
 
-  // 1. Create directories
+  console.log('  ↓ Downloading Mission Control app...');
+  try {
+    const tmpZip = '/tmp/MissionControl.zip';
+    execSync(`curl -sL "${DOWNLOAD_URL}" -o "${tmpZip}"`, { stdio: 'pipe' });
+    execSync(`unzip -oq "${tmpZip}" -d /Applications/`, { stdio: 'pipe' });
+    execSync(`rm "${tmpZip}"`, { stdio: 'pipe' });
+    // Remove quarantine so it opens without Gatekeeper warning
+    execSync(`xattr -dr com.apple.quarantine "${APP_PATH}" 2>/dev/null || true`, { stdio: 'pipe' });
+    console.log('  ✓ Installed Mission Control to /Applications/');
+    return true;
+  } catch (e) {
+    console.log('  ✗ Failed to download app. You can download manually from:');
+    console.log('    https://github.com/alexko0421/MissionControl/releases');
+    return false;
+  }
+}
+
+function setup() {
+  console.log('\n  🚀 Mission Control — Setup\n');
+
+  // 1. Install the app
+  const appInstalled = installApp();
+
+  // 2. Create directories
   mkdirSync(HOOKS_DEST, { recursive: true });
   mkdirSync(dirname(CLAUDE_SETTINGS), { recursive: true });
   console.log('  ✓ Created ~/.mission-control/hooks/');
 
-  // 2. Copy hook scripts
+  // 3. Copy hook scripts
   for (const file of HOOK_FILES) {
     const src = join(HOOKS_SRC, file);
     const dest = join(HOOKS_DEST, file);
@@ -101,7 +130,7 @@ function setup() {
     }
   }
 
-  // 3. Configure Claude Code settings
+  // 4. Configure Claude Code settings
   let settings = {};
   if (existsSync(CLAUDE_SETTINGS)) {
     try {
@@ -111,14 +140,12 @@ function setup() {
     }
   }
 
-  // Merge hooks without overwriting existing ones
   if (!settings.hooks) settings.hooks = {};
 
   for (const [hookName, hookEntries] of Object.entries(HOOK_CONFIG.hooks)) {
     if (!settings.hooks[hookName]) {
       settings.hooks[hookName] = hookEntries;
     } else {
-      // Check if our hook is already there
       const existing = settings.hooks[hookName];
       for (const entry of hookEntries) {
         const cmd = entry.hooks[0].command;
@@ -136,14 +163,32 @@ function setup() {
   console.log('  ✓ Updated ~/.claude/settings.json');
 
   console.log('\n  ✅ Setup complete!');
-  console.log('  → Download the Mission Control app: https://github.com/alexko0421/MissionControl/releases');
-  console.log('  → Your Claude Code sessions will now appear in Mission Control.\n');
+
+  // 5. Launch the app
+  if (appInstalled && existsSync(APP_PATH)) {
+    try {
+      execSync(`open "${APP_PATH}"`, { stdio: 'pipe' });
+      console.log('  → Mission Control is now running!\n');
+    } catch {
+      console.log('  → Open Mission Control from /Applications to start.\n');
+    }
+  }
 }
 
 function uninstall() {
-  console.log('\n  🗑  Mission Control AI — Uninstall\n');
+  console.log('\n  🗑  Mission Control — Uninstall\n');
 
-  // 1. Remove hook files
+  // 1. Remove app
+  if (existsSync(APP_PATH)) {
+    try {
+      execSync(`rm -rf "${APP_PATH}"`, { stdio: 'pipe' });
+      console.log('  ✓ Removed Mission Control app');
+    } catch {
+      console.log('  ⚠ Could not remove app — try: sudo rm -rf /Applications/MissionControl.app');
+    }
+  }
+
+  // 2. Remove hook files
   if (existsSync(HOOKS_DEST)) {
     for (const file of HOOK_FILES) {
       const dest = join(HOOKS_DEST, file);
@@ -154,7 +199,7 @@ function uninstall() {
     }
   }
 
-  // 2. Remove hooks from Claude settings
+  // 3. Remove hooks from Claude settings
   if (existsSync(CLAUDE_SETTINGS)) {
     try {
       const settings = JSON.parse(readFileSync(CLAUDE_SETTINGS, 'utf-8'));
