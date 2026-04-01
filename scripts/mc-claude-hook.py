@@ -256,7 +256,8 @@ def main():
         return
 
     project_name = get_project_name(cwd)
-    agent_id = hashlib.md5(cwd.encode()).hexdigest()[:8]
+    transcript_path = hook_input.get("transcript_path", "")
+    agent_id = session_id[:8] if session_id else hashlib.md5(cwd.encode()).hexdigest()[:8]
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     # If Claude stopped because it wants to use a tool → likely waiting for user approval
@@ -302,6 +303,8 @@ def main():
                 "summary": summary,
                 "nextAction": next_action,
                 "updatedAt": now,
+                "worktree": cwd,
+                "transcriptPath": transcript_path,
                 "app": app_name,
                 "tmuxSession": tmux_s,
                 "tmuxWindow": tmux_w,
@@ -323,6 +326,7 @@ def main():
             "nextAction": next_action,
             "updatedAt": now,
             "worktree": cwd,
+            "transcriptPath": transcript_path,
             "app": app_name,
             "tmuxSession": tmux_session,
             "tmuxWindow": tmux_window,

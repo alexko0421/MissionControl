@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Session liveness checker — detects if Claude Code sessions are still running.
 
-Checks every active agent (running/blocked) to see if there's still a process
-working in that directory. If not → marks as 'done'.
+Checks every active agent (running/blocked) to see if the session is still alive.
+Uses transcript file modification time as primary signal, falls back to process check.
+If dead → removes from status.json immediately.
 
 Works for Terminal, Conductor, and any app running Claude Code.
 """
@@ -15,13 +16,15 @@ from datetime import datetime, timezone
 STATUS_DIR = os.path.expanduser("~/.mission-control")
 STATUS_FILE = os.path.join(STATUS_DIR, "status.json")
 
+# A session is considered alive if its transcript was modified within this window
+TRANSCRIPT_ALIVE_SECS = 120  # 2 minutes
+
 
 def get_active_claude_cwds():
     """Find all working directories where claude/node processes are active."""
     cwds = set()
 
     try:
-        # Find all claude-related process PIDs
         result = subprocess.run(
             ["pgrep", "-f", "claude"],
             capture_output=True, text=True, timeout=5
@@ -33,14 +36,13 @@ def get_active_claude_cwds():
             if not pid:
                 continue
             try:
-                # Get cwd for this PID via lsof
                 lsof = subprocess.run(
                     ["lsof", "-a", "-p", pid, "-d", "cwd", "-Fn"],
                     capture_output=True, text=True, timeout=3
                 )
                 for line in lsof.stdout.split("\n"):
                     if line.startswith("n/"):
-                        cwds.add(line[1:])  # strip the 'n' prefix
+                        cwds.add(line[1:])
             except:
                 continue
     except:
@@ -49,36 +51,15 @@ def get_active_claude_cwds():
     return cwds
 
 
-def check_claude_sessions_dir():
-    """Check ~/.claude/projects/ for recently active sessions.
-    Returns set of working directories with active sessions."""
-    active_cwds = set()
-    projects_dir = os.path.expanduser("~/.claude/projects")
-    if not os.path.exists(projects_dir):
-        return active_cwds
-
-    now = datetime.now().timestamp()
-    for entry in os.listdir(projects_dir):
-        project_path = os.path.join(projects_dir, entry)
-        if not os.path.isdir(project_path):
-            continue
-
-        # Check for recent JSONL files (active sessions)
-        for fname in os.listdir(project_path):
-            if fname.endswith(".jsonl"):
-                fpath = os.path.join(project_path, fname)
-                try:
-                    mtime = os.path.getmtime(fpath)
-                    # Active if modified in last 2 minutes
-                    if now - mtime < 120:
-                        # Decode directory name back to path
-                        # e.g. "-Users-kochunlong-conductor-workspaces-..." → "/Users/kochunlong/conductor/workspaces/..."
-                        cwd = "/" + entry.lstrip("-").replace("-", "/")
-                        active_cwds.add(cwd)
-                except:
-                    continue
-
-    return active_cwds
+def is_transcript_alive(transcript_path):
+    """Check if a transcript file was recently modified."""
+    if not transcript_path:
+        return False
+    try:
+        mtime = os.path.getmtime(transcript_path)
+        return (datetime.now().timestamp() - mtime) < TRANSCRIPT_ALIVE_SECS
+    except:
+        return False
 
 
 def main():
@@ -91,42 +72,41 @@ def main():
     except:
         return
 
-    # Get all active working directories
     process_cwds = get_active_claude_cwds()
-    session_cwds = check_claude_sessions_dir()
-    all_active_cwds = process_cwds | session_cwds
 
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    updated = False
+    dead_ids = []
 
-    for i, agent in enumerate(agents):
-        # Only check running/blocked agents (not done/idle)
+    for agent in agents:
         if agent["status"] not in ("running", "blocked"):
             continue
 
-        # Skip scanner-based agents (Antigravity, Codex) — they have their own lifecycle
+        # Skip scanner-based agents — they have their own lifecycle
         app = agent.get("app", "")
         if app in ("Antigravity", "Codex"):
             continue
 
-        worktree = agent.get("worktree", "")
-        if not worktree:
+        # Primary check: transcript file still being written to
+        transcript_path = agent.get("transcriptPath", "")
+        if is_transcript_alive(transcript_path):
             continue
 
-        # Check if any active cwd matches this agent's worktree
-        is_alive = False
-        for cwd in all_active_cwds:
-            # Match if cwd starts with worktree or worktree starts with cwd
-            if cwd.startswith(worktree) or worktree.startswith(cwd):
-                is_alive = True
-                break
+        # Fallback: check if a claude process is running in the agent's worktree
+        worktree = agent.get("worktree", "")
+        if worktree:
+            wt = worktree.rstrip("/")
+            is_alive = False
+            for cwd in process_cwds:
+                c = cwd.rstrip("/")
+                if c == wt or c.startswith(wt + "/"):
+                    is_alive = True
+                    break
+            if is_alive:
+                continue
 
-        if not is_alive:
-            agents[i]["status"] = "done"
-            agents[i]["updatedAt"] = now
-            updated = True
+        dead_ids.append(agent["id"])
 
-    if updated:
+    if dead_ids:
+        agents = [a for a in agents if a["id"] not in dead_ids]
         with open(STATUS_FILE, "w") as f:
             json.dump(agents, f, ensure_ascii=False, indent=2)
 

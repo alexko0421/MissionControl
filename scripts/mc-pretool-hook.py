@@ -26,10 +26,11 @@ def main():
         return
 
     cwd = hook_input.get("cwd", "")
+    session_id = hook_input.get("session_id", "")
     if not cwd:
         return
 
-    agent_id = hashlib.md5(cwd.encode()).hexdigest()[:8]
+    agent_id = session_id[:8] if session_id else hashlib.md5(cwd.encode()).hexdigest()[:8]
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     agents = []
