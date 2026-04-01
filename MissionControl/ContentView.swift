@@ -101,10 +101,11 @@ struct CapsuleBar: View {
                     // Inner pill for agent status/name
                     HStack(spacing: 4) {
                         StatusDot(status: agent.status)
-                        Text(agent.name)
+                        Text(agent.name.count > 10 ? String(agent.name.prefix(10)) + "..." : agent.name)
                             .font(.system(size: 12, weight: .semibold, design: .rounded))
                             .foregroundStyle(.white)
                             .lineLimit(1)
+                            .fixedSize()
                         if store.isFocusModeActive && store.focusedAgentId == agent.id {
                             Image(systemName: "scope")
                                 .font(.system(size: 9, weight: .bold))

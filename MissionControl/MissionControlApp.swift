@@ -33,9 +33,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Position near top-center of screen
         if let screen = NSScreen.main {
             let screenFrame = screen.visibleFrame
-            let x = screenFrame.midX - 200
+            let panelWidth = panel.frame.width > 10 ? panel.frame.width : 400
+            let x = screenFrame.midX - panelWidth / 2
             let y = screenFrame.maxY - 45
             panel.setFrameOrigin(NSPoint(x: x, y: y))
+        }
+
+        // Re-center when panel resizes
+        NotificationCenter.default.addObserver(forName: NSWindow.didResizeNotification, object: panel, queue: .main) { [weak self] _ in
+            guard let self = self, let screen = NSScreen.main else { return }
+            let screenFrame = screen.visibleFrame
+            let panelFrame = self.panel.frame
+            let x = screenFrame.midX - panelFrame.width / 2
+            self.panel.setFrameOrigin(NSPoint(x: x, y: panelFrame.origin.y))
         }
         panel.orderFrontRegardless()
 
