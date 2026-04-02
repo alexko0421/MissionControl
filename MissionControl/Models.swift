@@ -66,6 +66,23 @@ struct TerminalLine: Codable, Identifiable {
     }
 }
 
+// MARK: - Permission Request
+
+struct PermissionRequest: Identifiable {
+    var id: String
+    var tool: String
+    var toolInput: [String: String]
+    var receivedAt: Date
+}
+
+// MARK: - Plan Review
+
+struct PlanReview: Identifiable {
+    var id: String
+    var markdown: String
+    var receivedAt: Date
+}
+
 // MARK: - Agent
 
 struct Agent: Identifiable, Codable {
@@ -123,23 +140,6 @@ struct Agent: Identifiable, Codable {
         if name.contains("claude") { return "brain.head.profile" }
         return "terminal"
     }
-}
-
-// MARK: - Permission Request
-
-struct PermissionRequest: Identifiable {
-    var id: String
-    var tool: String
-    var toolInput: [String: String]
-    var receivedAt: Date
-}
-
-// MARK: - Plan Review
-
-struct PlanReview: Identifiable {
-    var id: String
-    var markdown: String
-    var receivedAt: Date
 }
 
 // MARK: - Sample Data
