@@ -11,22 +11,29 @@
 		18EBB7589717682CACEE3C82 /* AgentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CD92BF1CC6D897039953331 /* AgentStore.swift */; };
 		309202C4D767933F88AEE889 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB5DA73C418961FC7B25AE84 /* ContentView.swift */; };
 		3FE08E3257F665D905CF0150 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45103C04701C5A509D84DB0C /* Models.swift */; };
+		41FAE60D1F44616D3ED6FBF0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 368FE371F0B34B2F84F66559 /* Assets.xcassets */; };
 		5330C852D09BB43E679EA616 /* MissionControlApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F3A0C88E4BC3F8B5E50F748 /* MissionControlApp.swift */; };
 		BEF901D6CA7FDC079E558640 /* FloatingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C3584F32DE0F76E15442837 /* FloatingPanel.swift */; };
 		C4743423AE7822B8D064106B /* TMuxBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D35A893FADD2B3ECFCBC0F9 /* TMuxBridge.swift */; };
 		C8C4E552AC4084FF1B41E072 /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD80219C23C6E929034D3869 /* SharedComponents.swift */; };
+		A1B2C3D4E5F60718091A2B3C /* MCSocketServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718091A2B30 /* MCSocketServer.swift */; };
+		A1B2C3D4E5F60718091A2B3D /* SocketMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718091A2B31 /* SocketMessage.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		368FE371F0B34B2F84F66559 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		45103C04701C5A509D84DB0C /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		4BF55F93FA2531E7F621514C /* MissionControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MissionControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C3584F32DE0F76E15442837 /* FloatingPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPanel.swift; sourceTree = "<group>"; };
 		5CD92BF1CC6D897039953331 /* AgentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentStore.swift; sourceTree = "<group>"; };
 		6D35A893FADD2B3ECFCBC0F9 /* TMuxBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMuxBridge.swift; sourceTree = "<group>"; };
 		8F3A0C88E4BC3F8B5E50F748 /* MissionControlApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissionControlApp.swift; sourceTree = "<group>"; };
+		90B28051075A78C99DBF5BE6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		CB5DA73C418961FC7B25AE84 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		CD80219C23C6E929034D3869 /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
 		DA4443C620C5229203586BB1 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718091A2B30 /* MCSocketServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCSocketServer.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718091A2B31 /* SocketMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketMessage.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -42,11 +49,15 @@
 			isa = PBXGroup;
 			children = (
 				5CD92BF1CC6D897039953331 /* AgentStore.swift */,
+				368FE371F0B34B2F84F66559 /* Assets.xcassets */,
 				CB5DA73C418961FC7B25AE84 /* ContentView.swift */,
 				5C3584F32DE0F76E15442837 /* FloatingPanel.swift */,
+				90B28051075A78C99DBF5BE6 /* Info.plist */,
 				8F3A0C88E4BC3F8B5E50F748 /* MissionControlApp.swift */,
+				A1B2C3D4E5F60718091A2B30 /* MCSocketServer.swift */,
 				45103C04701C5A509D84DB0C /* Models.swift */,
 				DA4443C620C5229203586BB1 /* SettingsView.swift */,
+				A1B2C3D4E5F60718091A2B31 /* SocketMessage.swift */,
 				CD80219C23C6E929034D3869 /* SharedComponents.swift */,
 				6D35A893FADD2B3ECFCBC0F9 /* TMuxBridge.swift */,
 			);
@@ -69,6 +80,7 @@
 			buildConfigurationList = B4F6813337605AD03FB1AF40 /* Build configuration list for PBXNativeTarget "MissionControl" */;
 			buildPhases = (
 				BD78A88B458121846C74AECF /* Sources */,
+				81C094E6D415BBEABB33F335 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -111,6 +123,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		81C094E6D415BBEABB33F335 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				41FAE60D1F44616D3ED6FBF0 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		BD78A88B458121846C74AECF /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -124,6 +147,8 @@
 				0345BF2ECC960D6BE0288CED /* SettingsView.swift in Sources */,
 				C8C4E552AC4084FF1B41E072 /* SharedComponents.swift in Sources */,
 				C4743423AE7822B8D064106B /* TMuxBridge.swift in Sources */,
+				A1B2C3D4E5F60718091A2B3C /* MCSocketServer.swift in Sources */,
+				A1B2C3D4E5F60718091A2B3D /* SocketMessage.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -136,9 +161,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MissionControl/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Mission Control";
-				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Mission Control needs to switch to your Terminal window when you click on an agent session.";
+				INFOPLIST_KEY_LSUIElement = NO;
 				INFOPLIST_KEY_NSMainStoryboardFile = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -277,9 +302,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MissionControl/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Mission Control";
-				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Mission Control needs to switch to your Terminal window when you click on an agent session.";
+				INFOPLIST_KEY_LSUIElement = NO;
 				INFOPLIST_KEY_NSMainStoryboardFile = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

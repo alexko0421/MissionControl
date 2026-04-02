@@ -46,26 +46,38 @@ class AgentStore: ObservableObject {
         return agents.first { $0.id == focusedAgentId }
     }
 
+    let socketServer = MCSocketServer()
+    private var pendingClientFDs: [String: Int32] = [:]  // requestId → clientFD
+
     private let statusDir  = FileManager.default.homeDirectoryForCurrentUser
                                 .appendingPathComponent(".mission-control")
-    private var statusFile: URL { statusDir.appendingPathComponent("status.json") }
-    private var fileSource: DispatchSourceFileSystemObject?
     private var pollingTimer: Timer?
-    private var lastFileData: Data?
 
     // MARK: - Lifecycle
 
     func startWatching() {
         createStatusDirIfNeeded()
-        loadFromFile()
-        startFileWatcher()
+        migrateFromStatusFile()
+        setupSocketServer()
         startPolling()
     }
 
     func stopWatching() {
-        fileSource?.cancel()
-        fileSource = nil
+        socketServer.stopListening()
         stopPolling()
+    }
+
+    private func setupSocketServer() {
+        socketServer.onStatusUpdate = { [weak self] msg in
+            self?.handleStatusUpdate(msg)
+        }
+        socketServer.onPermissionRequest = { [weak self] msg, clientFD in
+            self?.handlePermissionRequest(msg, clientFD: clientFD)
+        }
+        socketServer.onPlanReview = { [weak self] msg, clientFD in
+            self?.handlePlanReview(msg, clientFD: clientFD)
+        }
+        socketServer.startListening()
     }
 
     private var scanCounter = 0
@@ -73,13 +85,11 @@ class AgentStore: ObservableObject {
     private func startPolling() {
         pollingTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                // Run external scanners every ~6 seconds (every 2nd poll)
                 self?.scanCounter += 1
                 if self?.scanCounter ?? 0 >= 2 {
                     self?.scanCounter = 0
                     self?.runExternalScanners()
                 }
-                self?.loadFromFile()
                 self?.pollTerminals()
             }
         }
@@ -159,10 +169,7 @@ class AgentStore: ObservableObject {
             return false
         }
 
-        // Save cleanup back to file
-        if !agents.isEmpty {
-            saveToFile()
-        }
+        // Agents are now in-memory only, persisted by socket updates
     }
 
     // MARK: - Status File
@@ -171,92 +178,208 @@ class AgentStore: ObservableObject {
         try? FileManager.default.createDirectory(at: statusDir, withIntermediateDirectories: true)
     }
 
-    func loadFromFile() {
+    private func migrateFromStatusFile() {
+        let statusFile = statusDir.appendingPathComponent("status.json")
         guard FileManager.default.fileExists(atPath: statusFile.path) else { return }
         do {
             let data = try Data(contentsOf: statusFile)
-            // Skip if file content hasn't changed
-            if data == lastFileData { return }
-            lastFileData = data
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let loaded = try decoder.decode([Agent].self, from: data)
-
-            // Detect status changes before updating agents
-            let now = Date()
-            for agent in loaded {
-                let oldStatus = previousStatuses[agent.id]
-                let isNewBlockedOrDone = (agent.status == .blocked || agent.status == .done)
-                let statusChanged = (oldStatus != nil && oldStatus != agent.status)
-                let isFirstAppearanceBlocked = (oldStatus == nil && agent.status == .blocked)
-
-                if (statusChanged || isFirstAppearanceBlocked) && isNewBlockedOrDone {
-                    // Debounce check: skip if alerted within last 5 seconds
-                    if let lastAlert = lastAlertTimes[agent.id],
-                       now.timeIntervalSince(lastAlert) < 5 {
-                        continue
-                    }
-                    // Focus mode: only alert for focused agent (or all if no focus)
-                    if isFocusModeActive && agent.id != focusedAgentId {
-                        continue
-                    }
-                    lastAlertTimes[agent.id] = now
-                    activeAlert = AgentAlert(
-                        agentId: agent.id,
-                        agentName: agent.name,
-                        newStatus: agent.status,
-                        task: agent.task
-                    )
-                    // Play alert sound
-                    NSSound(named: "Ping")?.play()
-                }
-            }
-
-            // Update previous statuses
+            self.agents = loaded
             previousStatuses = Dictionary(uniqueKeysWithValues: loaded.map { ($0.id, $0.status) })
-
-            withAnimation(.easeInOut(duration: 0.2)) {
-                self.agents = loaded
-            }
-            cleanupStaleAgents()
-
-            // Auto-exit focus if focused agent is done or gone
-            if isFocusModeActive {
-                if let focused = agents.first(where: { $0.id == focusedAgentId }) {
-                    if focused.status == .done {
-                        stopFocus()
-                    }
-                } else {
-                    stopFocus()
-                }
-            }
         } catch {
-            print("AgentStore: failed to load status.json — \(error)")
+            print("AgentStore: migration from status.json failed — \(error)")
         }
     }
 
-    func saveToFile() {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = .prettyPrinted
-        guard let data = try? encoder.encode(agents) else { return }
-        try? data.write(to: statusFile)
+    // MARK: - Socket Message Handlers
+
+    private func handleStatusUpdate(_ msg: IncomingMessage) {
+        guard let agentId = msg.agentId else { return }
+        let newStatus = AgentStatus(rawValue: msg.status ?? "running") ?? .running
+
+        if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            let oldStatus = agents[idx].status
+
+            withAnimation(.easeInOut(duration: 0.2)) {
+                if let name = msg.name { agents[idx].name = name }
+                agents[idx].status = newStatus
+                if let task = msg.task { agents[idx].task = task }
+                if let summary = msg.summary { agents[idx].summary = summary }
+                if let nextAction = msg.nextAction { agents[idx].nextAction = nextAction }
+                if let worktree = msg.worktree { agents[idx].worktree = worktree }
+                if let app = msg.app { agents[idx].app = app }
+                if let agentType = msg.agentType { agents[idx].agentType = agentType }
+                if let tmuxSession = msg.tmuxSession { agents[idx].tmuxSession = tmuxSession }
+                if let tmuxWindow = msg.tmuxWindow { agents[idx].tmuxWindow = tmuxWindow }
+                if let tmuxPane = msg.tmuxPane { agents[idx].tmuxPane = tmuxPane }
+                agents[idx].updatedAt = Date()
+            }
+
+            // Alert on status change to blocked/done
+            if oldStatus != newStatus && (newStatus == .blocked || newStatus == .done) {
+                triggerAlert(for: agents[idx])
+            }
+        } else {
+            // New agent
+            var agent = Agent(
+                id: agentId,
+                name: msg.name ?? agentId,
+                status: newStatus,
+                task: msg.task ?? "",
+                summary: msg.summary ?? "",
+                terminalLines: [],
+                nextAction: msg.nextAction ?? "",
+                updatedAt: Date(),
+                worktree: msg.worktree,
+                app: msg.app,
+                tmuxSession: msg.tmuxSession,
+                tmuxWindow: msg.tmuxWindow,
+                tmuxPane: msg.tmuxPane,
+                agentType: msg.agentType
+            )
+
+            withAnimation(.easeInOut(duration: 0.2)) {
+                agents.append(agent)
+            }
+            previousStatuses[agentId] = newStatus
+
+            if newStatus == .blocked {
+                triggerAlert(for: agent)
+            }
+        }
+
+        cleanupStaleAgents()
+
+        // Auto-exit focus if focused agent is done or gone
+        if isFocusModeActive {
+            if let focused = agents.first(where: { $0.id == focusedAgentId }) {
+                if focused.status == .done {
+                    stopFocus()
+                }
+            } else {
+                stopFocus()
+            }
+        }
     }
 
-    // Watch the directory for changes (handles atomic writes and missing file)
-    private func startFileWatcher() {
-        let dirPath = statusDir.path
-        let fd = open(dirPath, O_EVTONLY)
-        guard fd >= 0 else { return }
-        let source = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fd,
-            eventMask: [.write, .rename],
-            queue: DispatchQueue.main
+    private func handlePermissionRequest(_ msg: IncomingMessage, clientFD: Int32) {
+        guard let agentId = msg.agentId,
+              let requestId = msg.requestId,
+              let tool = msg.tool else { return }
+
+        let request = PermissionRequest(
+            id: requestId,
+            tool: tool,
+            toolInput: msg.toolInput ?? [:],
+            receivedAt: Date()
         )
-        source.setEventHandler { [weak self] in self?.loadFromFile() }
-        source.setCancelHandler { close(fd) }
-        source.resume()
-        fileSource = source
+
+        pendingClientFDs[requestId] = clientFD
+
+        if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                agents[idx].pendingPermission = request
+                agents[idx].status = .blocked
+                agents[idx].updatedAt = Date()
+            }
+            triggerAlert(for: agents[idx])
+        }
+    }
+
+    private func handlePlanReview(_ msg: IncomingMessage, clientFD: Int32) {
+        guard let agentId = msg.agentId,
+              let requestId = msg.requestId,
+              let markdown = msg.markdown else { return }
+
+        let review = PlanReview(
+            id: requestId,
+            markdown: markdown,
+            receivedAt: Date()
+        )
+
+        pendingClientFDs[requestId] = clientFD
+
+        if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                agents[idx].pendingPlan = review
+                agents[idx].status = .blocked
+                agents[idx].updatedAt = Date()
+            }
+            triggerAlert(for: agents[idx])
+        }
+    }
+
+    private func triggerAlert(for agent: Agent) {
+        let now = Date()
+        // Debounce: skip if alerted within last 5 seconds
+        if let lastAlert = lastAlertTimes[agent.id],
+           now.timeIntervalSince(lastAlert) < 5 {
+            return
+        }
+        // Focus mode: only alert for focused agent (or all if no focus)
+        if isFocusModeActive && agent.id != focusedAgentId {
+            return
+        }
+        lastAlertTimes[agent.id] = now
+        activeAlert = AgentAlert(
+            agentId: agent.id,
+            agentName: agent.name,
+            newStatus: agent.status,
+            task: agent.task
+        )
+        NSSound(named: "Ping")?.play()
+    }
+
+    // MARK: - Approve / Deny Actions
+
+    func approvePermission(agentId: String, requestId: String) {
+        sendDecision(requestId: requestId, type: "permission_response", decision: "approve")
+        if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                agents[idx].pendingPermission = nil
+                agents[idx].status = .running
+                agents[idx].updatedAt = Date()
+            }
+        }
+    }
+
+    func denyPermission(agentId: String, requestId: String) {
+        sendDecision(requestId: requestId, type: "permission_response", decision: "deny")
+        if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                agents[idx].pendingPermission = nil
+                agents[idx].updatedAt = Date()
+            }
+        }
+    }
+
+    func approvePlan(agentId: String, requestId: String) {
+        sendDecision(requestId: requestId, type: "plan_response", decision: "approve")
+        if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                agents[idx].pendingPlan = nil
+                agents[idx].status = .running
+                agents[idx].updatedAt = Date()
+            }
+        }
+    }
+
+    func denyPlan(agentId: String, requestId: String) {
+        sendDecision(requestId: requestId, type: "plan_response", decision: "deny")
+        if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                agents[idx].pendingPlan = nil
+                agents[idx].updatedAt = Date()
+            }
+        }
+    }
+
+    private func sendDecision(requestId: String, type: String, decision: String) {
+        guard let clientFD = pendingClientFDs.removeValue(forKey: requestId) else { return }
+        let response = OutgoingMessage(type: type, requestId: requestId, decision: decision)
+        socketServer.sendResponse(to: clientFD, message: response)
     }
 
     // MARK: - Actions
