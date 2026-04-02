@@ -369,55 +369,71 @@ struct SessionRow: View {
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: 8) {
-            StatusDot(status: agent.status)
+        VStack(spacing: 4) {
+            // === Existing HStack row content ===
+            HStack(spacing: 8) {
+                StatusDot(status: agent.status)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(agent.name)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white.opacity(isHovered ? 1.0 : 0.95))
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(agent.name)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(isHovered ? 1.0 : 0.95))
+                        .lineLimit(1)
 
-                Text(agent.task)
-                    .font(.system(size: 13, weight: .regular, design: .rounded))
-                    .foregroundStyle(.white.opacity(isHovered ? 0.75 : 0.6))
-                    .lineLimit(1)
+                    Text(agent.task)
+                        .font(.system(size: 13, weight: .regular, design: .rounded))
+                        .foregroundStyle(.white.opacity(isHovered ? 0.75 : 0.6))
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 8)
+
+                Text(agent.status.label)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundColor(agent.status.color)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .frame(minWidth: 44)
+                    .background(agent.status.color.opacity(0.15), in: Capsule())
+
+                if store.isFocusModeActive && store.focusedAgentId == agent.id {
+                    Image(systemName: "scope")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color(red: 0.365, green: 0.792, blue: 0.647))
+                }
+
+                Text(agent.timeAgo)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.4))
+                    .frame(width: 54, alignment: .trailing)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.white.opacity(isHovered ? 0.08 : 0))
+            )
+            .scaleEffect(isHovered ? 1.01 : 1.0)
+            .animation(.spring(response: 0.4, dampingFraction: 0.9), value: isHovered)
+            .onHover { isHovered = $0 }
+            .onLongPressGesture(minimumDuration: 0.5) {
+                store.startFocus(agentId: agent.id)
+            }
+            .contentShape(Rectangle())
+
+            // Permission card (inline)
+            if let permission = agent.pendingPermission {
+                PermissionCardView(agent: agent, permission: permission)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: UnitPoint.top)))
             }
 
-            Spacer(minLength: 8)
-
-            Text(agent.status.label)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundColor(agent.status.color)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .frame(minWidth: 44)
-                .background(agent.status.color.opacity(0.15), in: Capsule())
-
-            if store.isFocusModeActive && store.focusedAgentId == agent.id {
-                Image(systemName: "scope")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Color(red: 0.365, green: 0.792, blue: 0.647))
-            }
-
-            Text(agent.timeAgo)
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.4))
-                .frame(width: 54, alignment: .trailing)
+            // Plan review card (inline) — TODO: Task 5
+            // if let plan = agent.pendingPlan {
+            //     PlanReviewView(agent: agent, plan: plan)
+            //         .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
+            // }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.white.opacity(isHovered ? 0.08 : 0))
-        )
-        .scaleEffect(isHovered ? 1.01 : 1.0)
-        .animation(.spring(response: 0.4, dampingFraction: 0.9), value: isHovered)
-        .onHover { isHovered = $0 }
-        .onLongPressGesture(minimumDuration: 0.5) {
-            store.startFocus(agentId: agent.id)
-        }
-        .contentShape(Rectangle())
+        .animation(.spring(response: 0.5, dampingFraction: 0.85), value: agent.pendingPermission?.id)
     }
 }
 
@@ -637,7 +653,7 @@ struct SettingsInlinePanel: View {
     @AppStorage("apiKey") private var apiKey = ""
     @AppStorage("appLanguage") private var appLanguage = "Auto"
     @AppStorage("launchAtLogin") private var launchAtLogin = false
-    @AppStorage("globalHotkey") private var globalHotkey = "⌥ Space"
+    @AppStorage("globalHotkey") private var globalHotkey = "⌥ + M"
 
     private var geminiKeyFile: URL {
         FileManager.default.homeDirectoryForCurrentUser
@@ -701,7 +717,6 @@ struct SettingsInlinePanel: View {
             HStack(spacing: 8) {
                 TopTabButton(title: t("账户"), isSelected: selectedTab == "账户") { switchTab("账户") }
                 TopTabButton(title: t("系统"), isSelected: selectedTab == "系统") { switchTab("系统") }
-                TopTabButton(title: t("快捷键"), isSelected: selectedTab == "快捷键") { switchTab("快捷键") }
             }
             .padding(6)
             .background(Color.white.opacity(0.04))
@@ -720,9 +735,6 @@ struct SettingsInlinePanel: View {
                 .transition(.opacity)
         } else if selectedTab == "系统" {
             systemTab
-                .transition(.opacity)
-        } else if selectedTab == "快捷键" {
-            hotkeyTab
                 .transition(.opacity)
         }
     }
@@ -779,6 +791,11 @@ private func switchTab(_ tab: String) {
 
 // MARK: - Hotkey Monitor Logic
 private func startRecording() {
+    // Prompt for Accessibility permission when user tries to set hotkey
+    let trusted = AXIsProcessTrustedWithOptions(
+        [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+    )
+    if !trusted { return }
     isRecordingHotkey = true
     eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
         var keys = [String]()
@@ -911,64 +928,12 @@ private var systemTab: some View {
             .frame(width: 120)
         }
 
-        // Launch at Login
-        HStack {
-            Text(t("开机自动启动"))
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(.white.opacity(0.85))
-            Spacer()
-            Toggle("", isOn: $launchAtLogin)
-                .toggleStyle(.switch)
-                .scaleEffect(0.9)
-                .tint(.white.opacity(0.7))
-        }
-    }
     .padding(.horizontal, 40)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 }
 
-@ViewBuilder
-private var hotkeyTab: some View {
-    VStack(spacing: 24) {
-        Button(action: { 
-            if isRecordingHotkey { stopRecording() } 
-            else { startRecording() }
-        }) {
-            let strokeColor = isRecordingHotkey ? Color.blue.opacity(0.6) : Color.white.opacity(0.12)
-            let bgColor = isRecordingHotkey ? Color.blue.opacity(0.1) : Color(white: 0.12)
-            
-            HStack(spacing: 12) {
-                Image(systemName: "keyboard")
-                    .font(.system(size: 18))
-                    .foregroundStyle(isRecordingHotkey ? Color.blue : .white)
-                Text(isRecordingHotkey ? t("请键入快捷键") : (globalHotkey.isEmpty ? t("无") : globalHotkey))
-            }
-            .font(.system(size: 20, weight: .bold, design: .rounded))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 36)
-            .padding(.vertical, 16)
-            .background(bgColor)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(strokeColor, lineWidth: isRecordingHotkey ? 2 : 1)
-            )
-            .shadow(color: isRecordingHotkey ? Color.blue.opacity(0.15) : Color.black.opacity(0.25), radius: 10, y: 5)
-            .scaleEffect(isRecordingHotkey ? 0.98 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isRecordingHotkey)
-        }
-        .buttonStyle(BouncyButtonStyle())
-
-        HStack(spacing: 6) {
-            Image(systemName: "pencil")
-            Text(isRecordingHotkey ? t("按下 ESC 键取消") : t("点击上方按钮修改"))
-        }
-        .font(.system(size: 13))
-        .foregroundStyle(.white.opacity(0.4))
-    }
-    .padding(.bottom, 16)
-    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 }
+
 }
 
 // Custom Bouncy Button Style

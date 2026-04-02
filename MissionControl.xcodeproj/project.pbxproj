@@ -18,6 +18,7 @@
 		C8C4E552AC4084FF1B41E072 /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD80219C23C6E929034D3869 /* SharedComponents.swift */; };
 		A1B2C3D4E5F60718091A2B3C /* MCSocketServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718091A2B30 /* MCSocketServer.swift */; };
 		A1B2C3D4E5F60718091A2B3D /* SocketMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718091A2B31 /* SocketMessage.swift */; };
+		A1B2C3D4E5F60718091A2B3E /* PermissionCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718091A2B32 /* PermissionCardView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +35,7 @@
 		DA4443C620C5229203586BB1 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718091A2B30 /* MCSocketServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCSocketServer.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718091A2B31 /* SocketMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketMessage.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718091A2B32 /* PermissionCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionCardView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -58,6 +60,7 @@
 				45103C04701C5A509D84DB0C /* Models.swift */,
 				DA4443C620C5229203586BB1 /* SettingsView.swift */,
 				A1B2C3D4E5F60718091A2B31 /* SocketMessage.swift */,
+				A1B2C3D4E5F60718091A2B32 /* PermissionCardView.swift */,
 				CD80219C23C6E929034D3869 /* SharedComponents.swift */,
 				6D35A893FADD2B3ECFCBC0F9 /* TMuxBridge.swift */,
 			);
@@ -149,6 +152,7 @@
 				C4743423AE7822B8D064106B /* TMuxBridge.swift in Sources */,
 				A1B2C3D4E5F60718091A2B3C /* MCSocketServer.swift in Sources */,
 				A1B2C3D4E5F60718091A2B3D /* SocketMessage.swift in Sources */,
+				A1B2C3D4E5F60718091A2B3E /* PermissionCardView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
