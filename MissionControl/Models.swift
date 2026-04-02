@@ -82,6 +82,14 @@ struct Agent: Identifiable, Codable {
     var tmuxSession: String?
     var tmuxWindow: Int?
     var tmuxPane: Int?
+    var agentType: String?
+    var pendingPermission: PermissionRequest? = nil
+    var pendingPlan: PlanReview? = nil
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, status, task, summary, terminalLines, nextAction, updatedAt
+        case worktree, app, tmuxSession, tmuxWindow, tmuxPane, agentType
+    }
 
     /// Shared language setting — set by the app on launch / change
     static var displayLanguage: String = "Auto"
@@ -115,6 +123,23 @@ struct Agent: Identifiable, Codable {
         if name.contains("claude") { return "brain.head.profile" }
         return "terminal"
     }
+}
+
+// MARK: - Permission Request
+
+struct PermissionRequest: Identifiable {
+    var id: String
+    var tool: String
+    var toolInput: [String: String]
+    var receivedAt: Date
+}
+
+// MARK: - Plan Review
+
+struct PlanReview: Identifiable {
+    var id: String
+    var markdown: String
+    var receivedAt: Date
 }
 
 // MARK: - Sample Data
