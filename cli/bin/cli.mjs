@@ -17,6 +17,7 @@ const APP_PATH = '/Applications/MissionControl.app';
 const DOWNLOAD_URL = 'https://github.com/alexko0421/MissionControl/releases/latest/download/MissionControl.zip';
 
 const HOOK_FILES = [
+  'mc-bridge.py',
   'mc-claude-hook.py',
   'mc-prompt-hook.py',
   'mc-pretool-hook.py',
@@ -72,15 +73,48 @@ const HOOK_CONFIG = {
   },
 };
 
+const CODEX_CONFIG = join(homedir(), '.codex');
+const GEMINI_CONFIG = join(homedir(), '.gemini', 'settings.json');
+const CURSOR_CONFIG = join(homedir(), '.cursor', 'hooks.json');
+
+const AGENTS = {
+  'claude-code': {
+    name: 'Claude Code',
+    detect: () => existsSync(join(homedir(), '.claude')),
+    setup: setupClaudeCode,
+  },
+  'codex': {
+    name: 'Codex',
+    detect: () => existsSync(CODEX_CONFIG),
+    setup: setupCodex,
+  },
+  'gemini-cli': {
+    name: 'Gemini CLI',
+    detect: () => existsSync(join(homedir(), '.gemini')),
+    setup: setupGeminiCLI,
+  },
+  'cursor': {
+    name: 'Cursor',
+    detect: () => existsSync(join(homedir(), '.cursor')),
+    setup: setupCursor,
+  },
+};
+
 function printHelp() {
   console.log(`
   Mission Control — monitor AI coding sessions in real time
 
   Usage:
-    npx mission-control-ai setup      Install app + hooks
-    npx mission-control-ai uninstall   Remove app + hooks
-    npx mission-control-ai status      Show current session status
-    npx mission-control-ai help        Show this help
+    npx mission-control-ai setup               Auto-detect and install hooks for all agents
+    npx mission-control-ai setup claude-code    Install hooks for Claude Code only
+    npx mission-control-ai setup codex          Install hooks for Codex only
+    npx mission-control-ai setup gemini-cli     Install hooks for Gemini CLI only
+    npx mission-control-ai setup cursor         Install hooks for Cursor only
+    npx mission-control-ai uninstall            Remove app + hooks
+    npx mission-control-ai status               Show current session status
+    npx mission-control-ai help                 Show this help
+
+  Supported agents: Claude Code, Codex, Gemini CLI, Cursor
   `);
 }
 
@@ -107,30 +141,7 @@ function installApp() {
   }
 }
 
-function setup() {
-  console.log('\n  🚀 Mission Control — Setup\n');
-
-  // 1. Install the app
-  const appInstalled = installApp();
-
-  // 2. Create directories
-  mkdirSync(HOOKS_DEST, { recursive: true });
-  mkdirSync(dirname(CLAUDE_SETTINGS), { recursive: true });
-  console.log('  ✓ Created ~/.mission-control/hooks/');
-
-  // 3. Copy hook scripts
-  for (const file of HOOK_FILES) {
-    const src = join(HOOKS_SRC, file);
-    const dest = join(HOOKS_DEST, file);
-    if (existsSync(src)) {
-      copyFileSync(src, dest);
-      console.log(`  ✓ Installed ${file}`);
-    } else {
-      console.log(`  ✗ Missing ${file} — skipped`);
-    }
-  }
-
-  // 4. Configure Claude Code settings
+function setupClaudeCode() {
   let settings = {};
   if (existsSync(CLAUDE_SETTINGS)) {
     try {
@@ -139,9 +150,7 @@ function setup() {
       console.log('  ⚠ Could not parse existing settings.json — creating new one');
     }
   }
-
   if (!settings.hooks) settings.hooks = {};
-
   for (const [hookName, hookEntries] of Object.entries(HOOK_CONFIG.hooks)) {
     if (!settings.hooks[hookName]) {
       settings.hooks[hookName] = hookEntries;
@@ -158,13 +167,103 @@ function setup() {
       }
     }
   }
-
   writeFileSync(CLAUDE_SETTINGS, JSON.stringify(settings, null, 2) + '\n');
-  console.log('  ✓ Updated ~/.claude/settings.json');
+  console.log('  ✓ Configured Claude Code hooks');
+}
+
+function setupCodex() {
+  const hooksFile = join(CODEX_CONFIG, 'hooks.json');
+  let hooks = {};
+  if (existsSync(hooksFile)) {
+    try { hooks = JSON.parse(readFileSync(hooksFile, 'utf-8')); } catch {}
+  }
+  const bridgePath = join(HOOKS_DEST, 'mc-bridge.py');
+  if (!hooks.hooks) hooks.hooks = {};
+  const codexHooks = {
+    'on_agent_stop': `python3 ${bridgePath} status --agent-id $AGENT_ID --status done`,
+    'on_agent_start': `python3 ${bridgePath} status --agent-id $AGENT_ID --status running`,
+  };
+  for (const [event, cmd] of Object.entries(codexHooks)) {
+    if (!hooks.hooks[event]) {
+      hooks.hooks[event] = [{ type: 'command', command: cmd }];
+    }
+  }
+  mkdirSync(CODEX_CONFIG, { recursive: true });
+  writeFileSync(hooksFile, JSON.stringify(hooks, null, 2) + '\n');
+  console.log('  ✓ Configured Codex hooks');
+}
+
+function setupGeminiCLI() {
+  const geminiDir = join(homedir(), '.gemini');
+  mkdirSync(geminiDir, { recursive: true });
+  let settings = {};
+  if (existsSync(GEMINI_CONFIG)) {
+    try { settings = JSON.parse(readFileSync(GEMINI_CONFIG, 'utf-8')); } catch {}
+  }
+  const bridgePath = join(HOOKS_DEST, 'mc-bridge.py');
+  if (!settings.hooks) settings.hooks = {};
+  settings.hooks['mission_control_bridge'] = `python3 ${bridgePath}`;
+  writeFileSync(GEMINI_CONFIG, JSON.stringify(settings, null, 2) + '\n');
+  console.log('  ✓ Configured Gemini CLI hooks');
+}
+
+function setupCursor() {
+  const cursorDir = join(homedir(), '.cursor');
+  mkdirSync(cursorDir, { recursive: true });
+  let hooks = {};
+  if (existsSync(CURSOR_CONFIG)) {
+    try { hooks = JSON.parse(readFileSync(CURSOR_CONFIG, 'utf-8')); } catch {}
+  }
+  const bridgePath = join(HOOKS_DEST, 'mc-bridge.py');
+  if (!hooks.hooks) hooks.hooks = {};
+  hooks.hooks['mission_control'] = { type: 'command', command: `python3 ${bridgePath}` };
+  writeFileSync(CURSOR_CONFIG, JSON.stringify(hooks, null, 2) + '\n');
+  console.log('  ✓ Configured Cursor hooks');
+}
+
+function setup() {
+  const targetAgent = process.argv[3];
+  console.log('\n  🚀 Mission Control — Setup\n');
+
+  const appInstalled = installApp();
+
+  mkdirSync(HOOKS_DEST, { recursive: true });
+  mkdirSync(dirname(CLAUDE_SETTINGS), { recursive: true });
+  console.log('  ✓ Created ~/.mission-control/hooks/');
+
+  for (const file of HOOK_FILES) {
+    const src = join(HOOKS_SRC, file);
+    const dest = join(HOOKS_DEST, file);
+    if (existsSync(src)) {
+      copyFileSync(src, dest);
+      if (file === 'mc-bridge.py') {
+        try { execSync(`chmod +x "${dest}"`, { stdio: 'pipe' }); } catch {}
+      }
+      console.log(`  ✓ Installed ${file}`);
+    } else {
+      console.log(`  ✗ Missing ${file} — skipped`);
+    }
+  }
+
+  if (targetAgent) {
+    const agent = AGENTS[targetAgent];
+    if (agent) {
+      if (agent.detect()) { agent.setup(); }
+      else { console.log(`  ⚠ ${agent.name} not detected — skipped`); }
+    } else {
+      console.log(`  ✗ Unknown agent: ${targetAgent}`);
+      console.log(`    Available: ${Object.keys(AGENTS).join(', ')}`);
+    }
+  } else {
+    let setupCount = 0;
+    for (const [key, agent] of Object.entries(AGENTS)) {
+      if (agent.detect()) { agent.setup(); setupCount++; }
+    }
+    if (setupCount === 0) { console.log('  ⚠ No supported AI agents detected'); }
+  }
 
   console.log('\n  ✅ Setup complete!');
 
-  // 5. Launch the app
   if (appInstalled && existsSync(APP_PATH)) {
     try {
       execSync(`open "${APP_PATH}"`, { stdio: 'pipe' });
