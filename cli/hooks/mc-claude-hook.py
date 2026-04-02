@@ -280,68 +280,27 @@ def main():
     if is_tool_use_stop and status != "done":
         status = "blocked"
 
-    # Load existing agents
-    agents = []
-    if os.path.exists(STATUS_FILE):
-        try:
-            with open(STATUS_FILE) as f:
-                agents = json.load(f)
-        except (json.JSONDecodeError, IOError):
-            agents = []
-
-    # Update or add this agent
-    found = False
+    # Send status update via mc-bridge
     app_name = detect_app()
-    for i, a in enumerate(agents):
-        if a["id"] == agent_id:
-            tmux_s, tmux_w, tmux_p = detect_tmux()
-            agents[i].update({
-                "name": project_name,
-                "status": status,
-                "task": task,
-                "summary": summary,
-                "nextAction": next_action,
-                "updatedAt": now,
-                "app": app_name,
-                "tmuxSession": tmux_s,
-                "tmuxWindow": tmux_w,
-                "tmuxPane": tmux_p,
-            })
-            found = True
-            break
-
     tmux_session, tmux_window, tmux_pane = detect_tmux()
 
-    if not found:
-        agents.append({
-            "id": agent_id,
-            "name": project_name,
-            "status": status,
-            "task": task,
-            "summary": summary,
-            "terminalLines": [],
-            "nextAction": next_action,
-            "updatedAt": now,
-            "worktree": cwd,
-            "app": app_name,
-            "tmuxSession": tmux_session,
-            "tmuxWindow": tmux_window,
-            "tmuxPane": tmux_pane,
-        })
+    bridge = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mc-bridge.py")
+    cmd = [
+        sys.executable, bridge, "status",
+        "--agent-id", agent_id,
+        "--status", status,
+        "--name", project_name,
+        "--task", task,
+        "--summary", summary,
+        "--next-action", next_action,
+        "--worktree", cwd,
+        "--app", app_name,
+        "--agent-type", "claude-code",
+    ]
+    if tmux_session:
+        cmd += ["--tmux-session", tmux_session, "--tmux-window", str(tmux_window), "--tmux-pane", str(tmux_pane)]
 
-    # Cleanup stale/duplicate entries before writing
-    try:
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("mc_cleanup",
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "mc-cleanup.py"))
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        agents = mod.cleanup_agents(agents)
-    except:
-        pass
-
-    with open(STATUS_FILE, "w") as f:
-        json.dump(agents, f, ensure_ascii=False, indent=2)
+    subprocess.run(cmd, timeout=5, capture_output=True)
 
 if __name__ == "__main__":
     main()

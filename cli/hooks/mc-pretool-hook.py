@@ -1,53 +1,44 @@
 #!/usr/bin/env python3
-"""Claude Code PreToolUse hook — marks agent as 'blocked' when a tool needs approval.
+"""Claude Code PreToolUse hook — sends permission request via mc-bridge (blocking)."""
 
-When Claude wants to use a tool (Edit, Write, Bash, etc.), the CLI may show
-an approval prompt. This hook sets the agent status to 'blocked' so Mission
-Control shows '需要你'.
-"""
+import json, os, sys, hashlib, subprocess, uuid
 
-import json
-import os
-import sys
-import hashlib
-from datetime import datetime, timezone
-
-STATUS_DIR = os.path.expanduser("~/.mission-control")
-STATUS_FILE = os.path.join(STATUS_DIR, "status.json")
-os.makedirs(STATUS_DIR, exist_ok=True)
+BRIDGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mc-bridge.py")
 
 def main():
     try:
         raw = sys.stdin.read()
-        if not raw.strip():
-            return
+        if not raw.strip(): return
         hook_input = json.loads(raw)
-    except (json.JSONDecodeError, IOError):
-        return
+    except (json.JSONDecodeError, IOError): return
 
     cwd = hook_input.get("cwd", "")
-    if not cwd:
-        return
+    if not cwd: return
 
     agent_id = hashlib.md5(cwd.encode()).hexdigest()[:8]
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    request_id = f"req_{uuid.uuid4().hex[:12]}"
+    tool_name = hook_input.get("tool_name", "Unknown")
+    tool_input = hook_input.get("tool_input", {})
 
-    agents = []
-    if os.path.exists(STATUS_FILE):
-        try:
-            with open(STATUS_FILE) as f:
-                agents = json.load(f)
-        except (json.JSONDecodeError, IOError):
-            agents = []
+    display_input = {}
+    if isinstance(tool_input, dict):
+        if "command" in tool_input: display_input["command"] = str(tool_input["command"])[:500]
+        if "file_path" in tool_input: display_input["file_path"] = str(tool_input["file_path"])
+        if "description" in tool_input: display_input["description"] = str(tool_input["description"])[:200]
+        if not display_input:
+            for k, v in list(tool_input.items())[:2]:
+                display_input[k] = str(v)[:200]
 
-    for i, a in enumerate(agents):
-        if a["id"] == agent_id:
-            agents[i]["status"] = "blocked"
-            agents[i]["updatedAt"] = now
-            break
+    cmd = [sys.executable, BRIDGE, "permission",
+        "--agent-id", agent_id, "--request-id", request_id,
+        "--tool", tool_name, "--tool-input", json.dumps(display_input)]
 
-    with open(STATUS_FILE, "w") as f:
-        json.dump(agents, f, ensure_ascii=False, indent=2)
+    try:
+        result = subprocess.run(cmd, timeout=15, capture_output=True, text=True)
+        if result.stdout.strip():
+            print(result.stdout.strip())
+    except subprocess.TimeoutExpired:
+        pass
 
 if __name__ == "__main__":
     main()
