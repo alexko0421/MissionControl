@@ -371,6 +371,12 @@ class AgentStore: ObservableObject {
         )
 
         if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            // Store tmux info from question message if available
+            if let session = msg.tmuxSession {
+                agents[idx].tmuxSession = session
+                agents[idx].tmuxWindow = msg.tmuxWindow
+                agents[idx].tmuxPane = msg.tmuxPane
+            }
             withAnimation(.easeInOut(duration: 0.2)) {
                 agents[idx].pendingQuestion = agentQuestion
                 agents[idx].status = .blocked
@@ -508,10 +514,9 @@ class AgentStore: ObservableObject {
         collapseIfNoPending()
     }
 
-    /// Type text into a terminal app using AppleScript keystroke injection
+    /// Type text into a terminal app using NSAppleScript (runs in-process, uses MissionControl's accessibility permissions)
     nonisolated static func typeInTerminal(text: String, appName: String) {
         let escaped = text.replacingOccurrences(of: "\"", with: "\\\"")
-        // Use System Events to type into the frontmost terminal process
         let script = """
         tell application "System Events"
             tell process "\(appName)"
@@ -522,13 +527,12 @@ class AgentStore: ObservableObject {
             end tell
         end tell
         """
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        process.arguments = ["-e", script]
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
-        try? process.run()
-        process.waitUntilExit()
+        var errorDict: NSDictionary?
+        let appleScript = NSAppleScript(source: script)
+        appleScript?.executeAndReturnError(&errorDict)
+        if let error = errorDict {
+            print("AppleScript error for \(appName): \(error)")
+        }
     }
 
     func respondFreeText(agentId: String, text: String) {
