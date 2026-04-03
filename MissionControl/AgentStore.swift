@@ -134,29 +134,16 @@ class AgentStore: ObservableObject {
 
     private func pollTerminals() {
         for i in agents.indices {
-            let target = agents[i].tmuxTarget
-            let status = agents[i].status
-            guard let target = target else { continue }
+            guard let target = agents[i].tmuxTarget else { continue }
 
-            Task.detached { [status] in
+            Task.detached {
                 let lines = TMuxBridge.capturePane(target: target)
-                // Detect prompts for blocked agents
-                let prompt: AgentQuestion? = (status == .blocked)
-                    ? TMuxBridge.detectPrompt(target: target) : nil
 
-                await MainActor.run { [weak self, lines, prompt] in
+                await MainActor.run { [weak self, lines] in
                     guard let self = self,
                           let idx = self.agents.firstIndex(where: { $0.tmuxTarget == target }) else { return }
                     if !lines.isEmpty {
                         self.agents[idx].terminalLines = lines
-                    }
-                    // Show detected prompt as question card
-                    if let prompt = prompt, self.agents[idx].pendingQuestion == nil {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            self.agents[idx].pendingQuestion = prompt
-                        }
-                        self.triggerAlert(for: self.agents[idx])
-                        self.autoSwitchTab()
                     }
                     // Clear question if agent is no longer blocked
                     if self.agents[idx].status != .blocked && self.agents[idx].pendingQuestion != nil {
