@@ -1,0 +1,4 @@
+{"type":"server-started","port":59677,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:59677","screen_dir":"/Users/kochunlong/MissionControl/.superpowers/brainstorm/50035-1775096930/content","state_dir":"/Users/kochunlong/MissionControl/.superpowers/brainstorm/50035-1775096930/state"}
+{"type":"screen-added","file":"/Users/kochunlong/MissionControl/.superpowers/brainstorm/50035-1775096930/content/architecture.html"}
+{"type":"screen-added","file":"/Users/kochunlong/MissionControl/.superpowers/brainstorm/50035-1775096930/content/permission-ui.html"}
+{"type":"server-stopped","reason":"idle timeout"}

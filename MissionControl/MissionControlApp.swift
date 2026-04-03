@@ -52,14 +52,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Start data watching
         store.startWatching()
 
-        // Hide dock icon
-        NSApp.setActivationPolicy(.accessory)
+        // Show in Dock and menu bar
+        NSApp.setActivationPolicy(.regular)
 
         // Create Status Bar Icon
         setupStatusBar()
 
-        // Register global hotkey
-        registerGlobalHotkey()
+        // Global hotkey disabled for now
+        // registerGlobalHotkey()
     }
 
     private func setupStatusBar() {
@@ -143,9 +143,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Global Hotkey
 
     private func registerGlobalHotkey() {
+        // Check Accessibility permission silently — don't prompt on launch
+        let trusted = AXIsProcessTrustedWithOptions(nil)
+        if !trusted {
+            print("⚠ Accessibility permission not granted — global hotkey disabled. Grant in System Settings → Privacy & Security → Accessibility")
+            return
+        }
+
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self = self else { return }
-            let stored = UserDefaults.standard.string(forKey: "globalHotkey") ?? "⌥ + Space"
+            let stored = UserDefaults.standard.string(forKey: "globalHotkey") ?? "⌥ + M"
             if self.eventMatchesHotkey(event, hotkey: stored) {
                 Task { @MainActor in
                     self.togglePanel()

@@ -83,6 +83,21 @@ struct PlanReview: Identifiable {
     var receivedAt: Date
 }
 
+// MARK: - Agent Question (detected from terminal)
+
+struct AgentQuestion: Identifiable {
+    var id: String  // agent id + timestamp
+    var question: String
+    var options: [QuestionOption]
+    var detectedAt: Date
+
+    struct QuestionOption: Identifiable {
+        var id: Int      // option number (1-based)
+        var label: String
+        var isHighlighted: Bool  // the currently selected/highlighted option
+    }
+}
+
 // MARK: - Agent
 
 struct Agent: Identifiable, Codable {
@@ -102,6 +117,7 @@ struct Agent: Identifiable, Codable {
     var agentType: String?
     var pendingPermission: PermissionRequest? = nil
     var pendingPlan: PlanReview? = nil
+    var pendingQuestion: AgentQuestion? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, name, status, task, summary, terminalLines, nextAction, updatedAt

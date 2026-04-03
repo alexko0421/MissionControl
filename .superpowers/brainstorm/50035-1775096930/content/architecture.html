@@ -1,0 +1,115 @@
+<h2>MissionControl v2 — 架构总览</h2>
+<p class="subtitle">Unix Socket 双向通讯 + 多 Agent 支持</p>
+
+<div class="section">
+  <div class="mockup">
+    <div class="mockup-header">系统架构图</div>
+    <div class="mockup-body" style="font-family: monospace; font-size: 13px; line-height: 1.6; padding: 24px;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div style="display: inline-block; background: #2a2a3e; border: 2px solid #7c6cf0; border-radius: 12px; padding: 16px 32px;">
+          <strong style="color: #c4b5fd; font-size: 15px;">MissionControl.app</strong>
+          <div style="color: #94a3b8; font-size: 12px; margin-top: 4px;">SwiftUI + MCSocketServer</div>
+        </div>
+      </div>
+
+      <div style="text-align: center; color: #64748b; margin: 8px 0;">
+        <div>▲ UI updates &nbsp;&nbsp;&nbsp;&nbsp; ▼ approve / deny</div>
+        <div style="font-size: 20px;">⇅</div>
+      </div>
+
+      <div style="text-align: center; margin: 12px 0;">
+        <div style="display: inline-block; background: #1e293b; border: 2px solid #38bdf8; border-radius: 8px; padding: 12px 28px;">
+          <strong style="color: #7dd3fc;">MCSocketServer</strong>
+          <div style="color: #94a3b8; font-size: 11px; margin-top: 4px;">~/.mission-control/mc.sock</div>
+        </div>
+      </div>
+
+      <div style="text-align: center; color: #64748b; margin: 8px 0;">
+        <div style="font-size: 20px;">⇅ &nbsp;&nbsp;&nbsp; ⇅ &nbsp;&nbsp;&nbsp; ⇅ &nbsp;&nbsp;&nbsp; ⇅</div>
+      </div>
+
+      <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+        <div style="background: #1a2332; border: 1px solid #22d3ee; border-radius: 8px; padding: 10px 16px; text-align: center; min-width: 100px;">
+          <div style="color: #22d3ee; font-size: 13px;">🔵 Claude Code</div>
+          <div style="color: #64748b; font-size: 10px;">Hook → Socket Client</div>
+        </div>
+        <div style="background: #1a2332; border: 1px solid #a78bfa; border-radius: 8px; padding: 10px 16px; text-align: center; min-width: 100px;">
+          <div style="color: #a78bfa; font-size: 13px;">🟣 Codex</div>
+          <div style="color: #64748b; font-size: 10px;">Hook → Socket Client</div>
+        </div>
+        <div style="background: #1a2332; border: 1px solid #34d399; border-radius: 8px; padding: 10px 16px; text-align: center; min-width: 100px;">
+          <div style="color: #34d399; font-size: 13px;">🟢 Gemini CLI</div>
+          <div style="color: #64748b; font-size: 10px;">Hook → Socket Client</div>
+        </div>
+        <div style="background: #1a2332; border: 1px solid #fb923c; border-radius: 8px; padding: 10px 16px; text-align: center; min-width: 100px;">
+          <div style="color: #fb923c; font-size: 13px;">🟠 Cursor</div>
+          <div style="color: #64748b; font-size: 10px;">Hook → Socket Client</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <h3>通讯协议（JSON over Unix Socket）</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px;">
+    <div class="mockup">
+      <div class="mockup-header">Agent → App（上行）</div>
+      <div class="mockup-body" style="font-family: monospace; font-size: 12px; padding: 16px;">
+        <div style="color: #94a3b8; margin-bottom: 8px;">// 状态更新</div>
+        <div style="color: #e2e8f0;">{ "type": "<span style="color: #7dd3fc;">status_update</span>",</div>
+        <div style="color: #e2e8f0;">&nbsp;&nbsp;"agent": "claude-code",</div>
+        <div style="color: #e2e8f0;">&nbsp;&nbsp;"status": "running",</div>
+        <div style="color: #e2e8f0;">&nbsp;&nbsp;"task": "重构 API..." }</div>
+        <br>
+        <div style="color: #94a3b8;">// Permission 请求</div>
+        <div style="color: #e2e8f0;">{ "type": "<span style="color: #fbbf24;">permission_request</span>",</div>
+        <div style="color: #e2e8f0;">&nbsp;&nbsp;"request_id": "abc123",</div>
+        <div style="color: #e2e8f0;">&nbsp;&nbsp;"tool": "Bash",</div>
+        <div style="color: #e2e8f0;">&nbsp;&nbsp;"command": "rm -rf dist/" }</div>
+        <br>
+        <div style="color: #94a3b8;">// Plan 预览</div>
+        <div style="color: #e2e8f0;">{ "type": "<span style="color: #a78bfa;">plan_review</span>",</div>
+        <div style="color: #e2e8f0;">&nbsp;&nbsp;"request_id": "def456",</div>
+        <div style="color: #e2e8f0;">&nbsp;&nbsp;"markdown": "## Plan\n..." }</div>
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="mockup-header">App → Agent（下行）</div>
+      <div class="mockup-body" style="font-family: monospace; font-size: 12px; padding: 16px;">
+        <div style="color: #94a3b8; margin-bottom: 8px;">// Permission 回应</div>
+        <div style="color: #e2e8f0;">{ "type": "<span style="color: #7dd3fc;">permission_response</span>",</div>
+        <div style="color: #e2e8f0;">&nbsp;&nbsp;"request_id": "abc123",</div>
+        <div style="color: #e2e8f0;">&nbsp;&nbsp;"decision": "<span style="color: #34d399;">approve</span>" }</div>
+        <br>
+        <div style="color: #94a3b8;">// Plan 回应</div>
+        <div style="color: #e2e8f0;">{ "type": "<span style="color: #7dd3fc;">plan_response</span>",</div>
+        <div style="color: #e2e8f0;">&nbsp;&nbsp;"request_id": "def456",</div>
+        <div style="color: #e2e8f0;">&nbsp;&nbsp;"decision": "<span style="color: #34d399;">approve</span>" }</div>
+        <br>
+        <div style="color: #94a3b8;">// 或者拒绝</div>
+        <div style="color: #e2e8f0;">{ "type": "permission_response",</div>
+        <div style="color: #e2e8f0;">&nbsp;&nbsp;"request_id": "abc123",</div>
+        <div style="color: #e2e8f0;">&nbsp;&nbsp;"decision": "<span style="color: #ef4444;">deny</span>" }</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <h3>核心组件</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px;">
+    <div style="background: #1e293b; border-radius: 8px; padding: 16px; border-left: 3px solid #7c6cf0;">
+      <div style="color: #c4b5fd; font-weight: bold; margin-bottom: 8px;">MCSocketServer</div>
+      <div style="color: #94a3b8; font-size: 12px;">App 内嵌嘅 Unix socket server，监听 agent 连接，管理所有 session</div>
+    </div>
+    <div style="background: #1e293b; border-radius: 8px; padding: 16px; border-left: 3px solid #38bdf8;">
+      <div style="color: #7dd3fc; font-weight: bold; margin-bottom: 8px;">mc-bridge</div>
+      <div style="color: #94a3b8; font-size: 12px;">轻量 socket client binary，hook 调用佢嚟同 app 通讯（取代直接写 status.json）</div>
+    </div>
+    <div style="background: #1e293b; border-radius: 8px; padding: 16px; border-left: 3px solid #22d3ee;">
+      <div style="color: #22d3ee; font-weight: bold; margin-bottom: 8px;">CLI (setup)</div>
+      <div style="color: #94a3b8; font-size: 12px;">自动检测已安装嘅 agent，注入对应 hook config，部署 mc-bridge</div>
+    </div>
+  </div>
+</div>

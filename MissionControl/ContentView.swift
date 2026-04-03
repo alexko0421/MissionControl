@@ -432,9 +432,16 @@ struct SessionRow: View {
                 PlanReviewView(agent: agent, plan: plan)
                     .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: UnitPoint.top)))
             }
+
+            // Detected question card (inline)
+            if let question = agent.pendingQuestion {
+                QuestionCardView(agent: agent, question: question)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: UnitPoint.top)))
+            }
         }
         .animation(.spring(response: 0.5, dampingFraction: 0.85), value: agent.pendingPermission?.id)
         .animation(.spring(response: 0.5, dampingFraction: 0.85), value: agent.pendingPlan?.id)
+        .animation(.spring(response: 0.5, dampingFraction: 0.85), value: agent.pendingQuestion?.id)
     }
 }
 

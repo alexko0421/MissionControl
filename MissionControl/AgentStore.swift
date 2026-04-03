@@ -125,16 +125,35 @@ class AgentStore: ObservableObject {
 
     private func pollTerminals() {
         for i in agents.indices {
-            guard agents[i].status == .running,
-                  let target = agents[i].tmuxTarget else { continue }
-            Task.detached { [target] in
+            let target = agents[i].tmuxTarget
+            let status = agents[i].status
+            guard let target = target else { continue }
+
+            Task.detached { [status] in
                 let lines = TMuxBridge.capturePane(target: target)
-                await MainActor.run { [weak self, lines] in
+                // Detect prompts for blocked agents
+                let prompt: AgentQuestion? = (status == .blocked)
+                    ? TMuxBridge.detectPrompt(target: target) : nil
+
+                await MainActor.run { [weak self, lines, prompt] in
                     guard let self = self,
                           let idx = self.agents.firstIndex(where: { $0.tmuxTarget == target }) else { return }
                     if !lines.isEmpty {
                         self.agents[idx].terminalLines = lines
-                        self.agents[idx].updatedAt = Date()
+                    }
+                    // Show detected prompt as question card
+                    if let prompt = prompt, self.agents[idx].pendingQuestion == nil {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            self.agents[idx].pendingQuestion = prompt
+                        }
+                        self.showSessionList()
+                        self.triggerAlert(for: self.agents[idx])
+                    }
+                    // Clear question if agent is no longer blocked
+                    if self.agents[idx].status != .blocked && self.agents[idx].pendingQuestion != nil {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            self.agents[idx].pendingQuestion = nil
+                        }
                     }
                 }
             }
@@ -285,6 +304,8 @@ class AgentStore: ObservableObject {
                 agents[idx].updatedAt = Date()
             }
             triggerAlert(for: agents[idx])
+            // Auto-expand session list so user sees the permission card
+            showSessionList()
         }
     }
 
@@ -308,6 +329,8 @@ class AgentStore: ObservableObject {
                 agents[idx].updatedAt = Date()
             }
             triggerAlert(for: agents[idx])
+            // Auto-expand session list so user sees the plan review card
+            showSessionList()
         }
     }
 
@@ -332,47 +355,99 @@ class AgentStore: ObservableObject {
         NSSound(named: "Ping")?.play()
     }
 
-    // MARK: - Approve / Deny Actions
+    // MARK: - Permission Choice
 
-    func approvePermission(agentId: String, requestId: String) {
-        sendDecision(requestId: requestId, type: "permission_response", decision: "approve")
-        if let idx = agents.firstIndex(where: { $0.id == agentId }) {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                agents[idx].pendingPermission = nil
-                agents[idx].status = .running
-                agents[idx].updatedAt = Date()
+    enum PermissionChoice {
+        case yes            // Send "1" → Yes
+        case yesDontAskAgain // Send "2" → Yes, don't ask again
+        case no             // Send "3" → No
+
+        var tmuxKey: String {
+            switch self {
+            case .yes: return "1"
+            case .yesDontAskAgain: return "2"
+            case .no: return "3"
+            }
+        }
+
+        var isApproval: Bool {
+            switch self {
+            case .yes, .yesDontAskAgain: return true
+            case .no: return false
             }
         }
     }
 
-    func denyPermission(agentId: String, requestId: String) {
-        sendDecision(requestId: requestId, type: "permission_response", decision: "deny")
+    // MARK: - Approve / Deny Actions
+
+    func respondPermission(agentId: String, requestId: String, choice: PermissionChoice) {
+        let decision = choice.isApproval ? "approve" : "deny"
+        sendDecision(requestId: requestId, type: "permission_response", decision: decision)
         if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            if let target = agents[idx].tmuxTarget {
+                let key = choice.tmuxKey
+                Task.detached { TMuxBridge.sendKeys(target: target, command: key) }
+            }
             withAnimation(.easeInOut(duration: 0.2)) {
                 agents[idx].pendingPermission = nil
+                agents[idx].status = choice.isApproval ? .running : agents[idx].status
                 agents[idx].updatedAt = Date()
             }
         }
+        collapseIfNoPending()
     }
 
     func approvePlan(agentId: String, requestId: String) {
         sendDecision(requestId: requestId, type: "plan_response", decision: "approve")
         if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            if let target = agents[idx].tmuxTarget {
+                Task.detached { TMuxBridge.sendKeys(target: target, command: "y") }
+            }
             withAnimation(.easeInOut(duration: 0.2)) {
                 agents[idx].pendingPlan = nil
                 agents[idx].status = .running
                 agents[idx].updatedAt = Date()
             }
         }
+        collapseIfNoPending()
     }
 
     func denyPlan(agentId: String, requestId: String) {
         sendDecision(requestId: requestId, type: "plan_response", decision: "deny")
         if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            if let target = agents[idx].tmuxTarget {
+                Task.detached { TMuxBridge.sendKeys(target: target, command: "n") }
+            }
             withAnimation(.easeInOut(duration: 0.2)) {
                 agents[idx].pendingPlan = nil
                 agents[idx].updatedAt = Date()
             }
+        }
+        collapseIfNoPending()
+    }
+
+    func respondQuestion(agentId: String, option: AgentQuestion.QuestionOption) {
+        if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            if let target = agents[idx].tmuxTarget {
+                let key = "\(option.id)"
+                Task.detached { TMuxBridge.sendKeys(target: target, command: key) }
+            }
+            withAnimation(.easeInOut(duration: 0.2)) {
+                agents[idx].pendingQuestion = nil
+                agents[idx].status = .running
+                agents[idx].updatedAt = Date()
+            }
+        }
+        collapseIfNoPending()
+    }
+
+    /// Auto-collapse session list when no more pending items
+    private func collapseIfNoPending() {
+        let hasPending = agents.contains {
+            $0.pendingPermission != nil || $0.pendingPlan != nil || $0.pendingQuestion != nil
+        }
+        if !hasPending {
+            showTerminal()
         }
     }
 

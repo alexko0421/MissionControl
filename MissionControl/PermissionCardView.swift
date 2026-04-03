@@ -4,11 +4,11 @@ struct PermissionCardView: View {
     let agent: Agent
     let permission: PermissionRequest
     @EnvironmentObject var store: AgentStore
-    @State private var isApproveHovered = false
-    @State private var isDenyHovered = false
+    @State private var hoveredOption: Int? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            // Header
             HStack(spacing: 6) {
                 Image(systemName: "lock.shield.fill")
                     .font(.system(size: 11, weight: .bold))
@@ -19,6 +19,7 @@ struct PermissionCardView: View {
                 Spacer()
             }
 
+            // Tool info
             VStack(alignment: .leading, spacing: 4) {
                 Text("Tool: \(permission.tool)")
                     .font(.system(size: 11, weight: .medium, design: .rounded))
@@ -41,42 +42,43 @@ struct PermissionCardView: View {
                 }
             }
 
-            HStack(spacing: 8) {
-                Button(action: {
-                    store.approvePermission(agentId: agent.id, requestId: permission.id)
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 10, weight: .bold))
-                        Text("Approve")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-                    .background(Color(red: 0.204, green: 0.827, blue: 0.600).opacity(isApproveHovered ? 1.0 : 0.85))
-                    .foregroundStyle(.black)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            // Three real options matching Claude Code's permission prompt
+            VStack(spacing: 6) {
+                // Option 1: Yes
+                PermissionOptionButton(
+                    number: 1,
+                    label: "Yes",
+                    color: Color(red: 0.204, green: 0.827, blue: 0.600),
+                    textColor: .black,
+                    isHovered: hoveredOption == 1
+                ) {
+                    store.respondPermission(agentId: agent.id, requestId: permission.id, choice: .yes)
                 }
-                .buttonStyle(.plain)
-                .onHover { isApproveHovered = $0 }
+                .onHover { hoveredOption = $0 ? 1 : nil }
 
-                Button(action: {
-                    store.denyPermission(agentId: agent.id, requestId: permission.id)
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 10, weight: .bold))
-                        Text("Deny")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-                    .background(Color(red: 0.937, green: 0.267, blue: 0.267).opacity(isDenyHovered ? 1.0 : 0.85))
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                // Option 2: Yes, and don't ask again
+                PermissionOptionButton(
+                    number: 2,
+                    label: "Yes, don't ask again",
+                    color: Color(red: 0.365, green: 0.631, blue: 0.847),
+                    textColor: .white,
+                    isHovered: hoveredOption == 2
+                ) {
+                    store.respondPermission(agentId: agent.id, requestId: permission.id, choice: .yesDontAskAgain)
                 }
-                .buttonStyle(.plain)
-                .onHover { isDenyHovered = $0 }
+                .onHover { hoveredOption = $0 ? 2 : nil }
+
+                // Option 3: No
+                PermissionOptionButton(
+                    number: 3,
+                    label: "No",
+                    color: Color(red: 0.937, green: 0.267, blue: 0.267),
+                    textColor: .white,
+                    isHovered: hoveredOption == 3
+                ) {
+                    store.respondPermission(agentId: agent.id, requestId: permission.id, choice: .no)
+                }
+                .onHover { hoveredOption = $0 ? 3 : nil }
             }
         }
         .padding(12)
@@ -87,5 +89,41 @@ struct PermissionCardView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .padding(.horizontal, 10)
+    }
+}
+
+// MARK: - Option Button
+
+struct PermissionOptionButton: View {
+    let number: Int
+    let label: String
+    let color: Color
+    let textColor: Color
+    let isHovered: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Text("\(number)")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundStyle(textColor.opacity(0.7))
+                    .frame(width: 20, height: 20)
+                    .background(textColor == .black ? Color.black.opacity(0.15) : Color.white.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+
+                Text(label)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+
+                Spacer()
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity)
+            .background(color.opacity(isHovered ? 1.0 : 0.85))
+            .foregroundStyle(textColor)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
     }
 }

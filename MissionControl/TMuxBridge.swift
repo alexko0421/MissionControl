@@ -31,6 +31,85 @@ enum TMuxBridge {
         return output.components(separatedBy: "\n").filter { !$0.isEmpty }
     }
 
+    // MARK: - Prompt Detection
+
+    /// Parse the last N lines of a tmux pane looking for interactive prompts.
+    /// Returns an AgentQuestion if a prompt with numbered options is detected.
+    static func detectPrompt(target: String) -> AgentQuestion? {
+        let output = shell("tmux capture-pane -t \"\(target)\" -p -S -20 2>/dev/null")
+        let allLines = output.components(separatedBy: "\n")
+        let lines = allLines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        guard !lines.isEmpty else { return nil }
+
+        // Look for numbered options pattern: "  1. Some text" or "> 1. Some text"
+        var options: [(number: Int, label: String, highlighted: Bool)] = []
+        var questionLine: String? = nil
+
+        for (i, line) in lines.enumerated() {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+            // Match patterns like "› 1. Yes" or "  1. Yes" or "> 1. Yes"
+            // The › character indicates the currently highlighted option
+            let isHighlighted = trimmed.hasPrefix("›") || trimmed.hasPrefix(">")
+            let cleaned = trimmed
+                .replacingOccurrences(of: "^[›>]\\s*", with: "", options: .regularExpression)
+                .trimmingCharacters(in: .whitespaces)
+
+            // Match "N. text" or "N) text"
+            if let match = cleaned.range(of: #"^(\d+)[.\)]\s+(.+)"#, options: .regularExpression) {
+                let numStr = String(cleaned[cleaned.startIndex..<cleaned.index(cleaned.startIndex, offsetBy: 1)])
+                if let num = Int(numStr) {
+                    let labelStart = cleaned.index(after: cleaned.firstIndex(of: " ")!)
+                    let label = String(cleaned[labelStart...]).trimmingCharacters(in: .whitespaces)
+                    options.append((number: num, label: label, highlighted: isHighlighted))
+
+                    // The question is usually 1-2 lines before the first option
+                    if options.count == 1 && i > 0 {
+                        // Look backwards for the question text
+                        for j in stride(from: i - 1, through: max(0, i - 3), by: -1) {
+                            let q = lines[j].trimmingCharacters(in: .whitespaces)
+                            if !q.isEmpty && q.range(of: #"^\d+[.\)]"#, options: .regularExpression) == nil {
+                                questionLine = q
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Also check for simple "? question [y/n]" or "Do you want to proceed?" patterns
+        if options.isEmpty {
+            for line in lines.suffix(5) {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                // "Esc to cancel" is a Claude Code prompt indicator
+                if trimmed.contains("Esc to cancel") {
+                    // This is a Claude Code interactive prompt — but options were already parsed above
+                    // If no numbered options found, it might be a yes/no style
+                    break
+                }
+            }
+        }
+
+        guard !options.isEmpty else { return nil }
+
+        let question = questionLine ?? "Choose an option"
+        let agentOptions = options.map { opt in
+            AgentQuestion.QuestionOption(
+                id: opt.number,
+                label: opt.label,
+                isHighlighted: opt.highlighted
+            )
+        }
+
+        return AgentQuestion(
+            id: "\(target)-\(Int(Date().timeIntervalSince1970))",
+            question: question,
+            options: agentOptions,
+            detectedAt: Date()
+        )
+    }
+
     // MARK: - Private
 
     private static func shell(_ command: String) -> String {

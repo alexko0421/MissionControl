@@ -1,0 +1,115 @@
+<h2>Permission & Plan Review UI</h2>
+<p class="subtitle">喺现有 capsule bar 展开嘅 session panel 入面显示</p>
+
+<div class="section">
+  <h3>Permission Request 弹出</h3>
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">方案 A：Inline 卡片（推荐）</div>
+      <div class="mockup-body" style="padding: 16px;">
+        <!-- Simulated capsule bar -->
+        <div style="background: #1e1e2e; border-radius: 20px; padding: 8px 16px; display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+          <div style="width: 8px; height: 8px; border-radius: 50%; background: #5ecea3;"></div>
+          <span style="color: #e2e8f0; font-size: 12px; flex: 1;">2 Running · 1 Action</span>
+          <div style="width: 8px; height: 8px; border-radius: 50%; background: #f0a030;"></div>
+        </div>
+        <!-- Session list with permission card -->
+        <div style="background: #1e1e2e; border-radius: 12px; padding: 12px; margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: #f0a030;"></div>
+            <span style="color: #e2e8f0; font-size: 13px; font-weight: 600;">Claude Code</span>
+            <span style="color: #f0a030; font-size: 11px; margin-left: auto;">⚡ Permission</span>
+          </div>
+          <!-- Permission detail -->
+          <div style="background: #2a2a3e; border: 1px solid #f0a030; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+            <div style="color: #94a3b8; font-size: 11px; margin-bottom: 4px;">Tool: Bash</div>
+            <div style="color: #e2e8f0; font-size: 12px; font-family: monospace; background: #0f172a; padding: 8px; border-radius: 4px; margin-bottom: 10px;">rm -rf dist/ && npm run build</div>
+            <div style="display: flex; gap: 8px;">
+              <button style="flex: 1; background: #34d399; color: #0f172a; border: none; border-radius: 6px; padding: 6px 0; font-weight: 600; font-size: 12px; cursor: pointer;">✓ Approve</button>
+              <button style="flex: 1; background: #ef4444; color: white; border: none; border-radius: 6px; padding: 6px 0; font-weight: 600; font-size: 12px; cursor: pointer;">✗ Deny</button>
+            </div>
+          </div>
+        </div>
+        <div style="color: #64748b; font-size: 11px; text-align: center;">Permission 卡片直接嵌入 session 入面</div>
+      </div>
+    </div>
+
+    <div class="mockup">
+      <div class="mockup-header">方案 B：独立弹窗</div>
+      <div class="mockup-body" style="padding: 16px; position: relative;">
+        <!-- Capsule bar -->
+        <div style="background: #1e1e2e; border-radius: 20px; padding: 8px 16px; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; opacity: 0.5;">
+          <div style="width: 8px; height: 8px; border-radius: 50%; background: #5ecea3;"></div>
+          <span style="color: #e2e8f0; font-size: 12px; flex: 1;">2 Running · 1 Action</span>
+        </div>
+        <!-- Modal overlay -->
+        <div style="background: #1e1e2e; border: 2px solid #f0a030; border-radius: 12px; padding: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <span style="color: #f0a030; font-size: 14px;">⚡</span>
+            <span style="color: #e2e8f0; font-size: 14px; font-weight: 600;">Permission Request</span>
+          </div>
+          <div style="color: #94a3b8; font-size: 12px; margin-bottom: 4px;">Claude Code · Tool: Bash</div>
+          <div style="color: #e2e8f0; font-size: 12px; font-family: monospace; background: #0f172a; padding: 8px; border-radius: 4px; margin-bottom: 12px;">rm -rf dist/ && npm run build</div>
+          <div style="display: flex; gap: 8px;">
+            <button style="flex: 1; background: #34d399; color: #0f172a; border: none; border-radius: 6px; padding: 8px 0; font-weight: 600; font-size: 13px; cursor: pointer;">✓ Approve</button>
+            <button style="flex: 1; background: #ef4444; color: white; border: none; border-radius: 6px; padding: 8px 0; font-weight: 600; font-size: 13px; cursor: pointer;">✗ Deny</button>
+          </div>
+        </div>
+        <div style="color: #64748b; font-size: 11px; text-align: center; margin-top: 8px;">独立弹窗，覆盖喺 capsule bar 上面</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <h3>Plan Review</h3>
+  <div class="mockup">
+    <div class="mockup-header">Plan 预览 — Markdown Rendering</div>
+    <div class="mockup-body" style="padding: 16px;">
+      <div style="background: #1e1e2e; border-radius: 12px; padding: 12px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+          <div style="width: 8px; height: 8px; border-radius: 50%; background: #a78bfa;"></div>
+          <span style="color: #e2e8f0; font-size: 13px; font-weight: 600;">Claude Code</span>
+          <span style="color: #a78bfa; font-size: 11px; margin-left: auto;">📋 Plan Review</span>
+        </div>
+        <!-- Markdown rendered plan -->
+        <div style="background: #0f172a; border: 1px solid #a78bfa; border-radius: 8px; padding: 16px; margin-bottom: 12px; max-height: 200px; overflow-y: auto;">
+          <div style="color: #c4b5fd; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Implementation Plan</div>
+          <div style="color: #e2e8f0; font-size: 12px; line-height: 1.6;">
+            <div style="margin-bottom: 6px;"><span style="color: #34d399;">1.</span> 重构 AgentStore 通讯层</div>
+            <div style="margin-bottom: 6px; padding-left: 16px; color: #94a3b8;">- 移除 FileWatcher，加入 MCSocketServer</div>
+            <div style="margin-bottom: 6px; padding-left: 16px; color: #94a3b8;">- 新增 SocketMessage protocol</div>
+            <div style="margin-bottom: 6px;"><span style="color: #34d399;">2.</span> 实现 Permission UI 组件</div>
+            <div style="margin-bottom: 6px; padding-left: 16px; color: #94a3b8;">- PermissionCard view</div>
+            <div style="margin-bottom: 6px; padding-left: 16px; color: #94a3b8;">- 同 AgentStore 嘅 binding</div>
+            <div style="margin-bottom: 6px;"><span style="color: #34d399;">3.</span> 更新 CLI setup 命令</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button style="flex: 1; background: #34d399; color: #0f172a; border: none; border-radius: 6px; padding: 6px 0; font-weight: 600; font-size: 12px; cursor: pointer;">✓ Approve Plan</button>
+          <button style="flex: 1; background: #ef4444; color: white; border: none; border-radius: 6px; padding: 6px 0; font-weight: 600; font-size: 12px; cursor: pointer;">✗ Reject</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <h3>你钟意边个 Permission UI 方向？</h3>
+  <div class="options">
+    <div class="option" data-choice="a" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Inline 卡片</h3>
+        <p>Permission 嵌入 session panel 入面，唔遮挡其他 session，context 更清晰</p>
+      </div>
+    </div>
+    <div class="option" data-choice="b" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>独立弹窗</h3>
+        <p>更加醒目，确保用户唔会错过，但会遮挡其他内容</p>
+      </div>
+    </div>
+  </div>
+</div>
