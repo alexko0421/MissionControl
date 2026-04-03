@@ -490,11 +490,11 @@ class AgentStore: ObservableObject {
                     }
                 }
             } else {
-                // Non-tmux: use AppleScript to type into Terminal after a short delay
-                // (wait for Claude Code to show its prompt after hook exits)
+                // Non-tmux: use AppleScript to type into Terminal
+                // Need to wait for hook to exit + Claude Code to render prompt
                 let appName = agents[idx].app ?? "Terminal"
                 Task.detached {
-                    Thread.sleep(forTimeInterval: 0.5)
+                    Thread.sleep(forTimeInterval: 2.0)
                     Self.typeInTerminal(text: sendKey, appName: appName)
                 }
             }

@@ -121,7 +121,7 @@ def cmd_permission(args):
     result = send_and_receive(message, wait_for_response=True)
     if result is None: result = {"decision": "approve"}
     if result.get("decision") == "approve":
-        print(json.dumps({"decision": "allow"}))
+        print(json.dumps({"approve": True}))
     else:
         print(json.dumps({"decision": "block", "reason": "User denied in MissionControl"}))
 
@@ -151,8 +151,9 @@ def cmd_question(args):
     result = send_and_receive(message, wait_for_response=True)
     if result is None: result = {"decision": "approve"}
     # Output decision — Claude Code reads this to skip its own prompt
+    # Try both formats to see which Claude Code recognizes
     if result.get("decision") == "approve":
-        print(json.dumps({"decision": "allow"}))
+        print(json.dumps({"approve": True}))
     else:
         print(json.dumps({"decision": "block", "reason": "User denied in MissionControl"}))
 
