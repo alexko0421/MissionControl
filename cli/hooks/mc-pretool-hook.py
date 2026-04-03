@@ -5,9 +5,26 @@ Sends the tool approval question with real options via socket.
 Blocks until user responds in MissionControl UI.
 """
 
-import json, os, sys, hashlib, subprocess, uuid
+import json, os, sys, hashlib, subprocess, uuid, shutil
 
 BRIDGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mc-bridge.py")
+
+def get_tmux_info():
+    """Return (session, window, pane) if running inside tmux, else (None, None, None)."""
+    if not os.environ.get("TMUX"):
+        return None, None, None
+    tmux = shutil.which("tmux") or "/opt/homebrew/bin/tmux"
+    try:
+        result = subprocess.run(
+            [tmux, "display-message", "-p", "#{session_name}:#{window_index}.#{pane_index}"],
+            capture_output=True, text=True, timeout=5
+        )
+        parts = result.stdout.strip().replace(":", " ").replace(".", " ").split()
+        if len(parts) == 3:
+            return parts[0], int(parts[1]), int(parts[2])
+    except Exception:
+        pass
+    return None, None, None
 
 def main():
     try:
@@ -34,10 +51,11 @@ def main():
     request_id = f"req_{uuid.uuid4().hex[:12]}"
 
     # Claude Code permission options
+    # sendKey must match what Claude Code's terminal prompt accepts
     options = json.dumps([
-        {"id": "1", "label": "Yes", "sendKey": "1"},
-        {"id": "2", "label": "Yes, don't ask again", "sendKey": "2"},
-        {"id": "3", "label": "No", "sendKey": "3"},
+        {"id": "1", "label": "Yes", "sendKey": "y"},
+        {"id": "2", "label": "Yes, don't ask again", "sendKey": "!"},
+        {"id": "3", "label": "No", "sendKey": "n"},
     ])
 
     cmd = [
@@ -47,6 +65,10 @@ def main():
         "--question", f"Do you want to proceed?\n{desc}",
         "--options", options,
     ]
+
+    session, window, pane = get_tmux_info()
+    if session is not None:
+        cmd += ["--tmux-session", session, "--tmux-window", str(window), "--tmux-pane", str(pane)]
 
     try:
         result = subprocess.run(cmd, timeout=30, capture_output=True, text=True)
