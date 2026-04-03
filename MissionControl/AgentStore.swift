@@ -441,6 +441,20 @@ class AgentStore: ObservableObject {
         collapseIfNoPending()
     }
 
+    func respondFreeText(agentId: String, text: String) {
+        if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            if let target = agents[idx].tmuxTarget {
+                Task.detached { TMuxBridge.sendKeys(target: target, command: text) }
+            }
+            withAnimation(.easeInOut(duration: 0.2)) {
+                agents[idx].pendingQuestion = nil
+                agents[idx].status = .running
+                agents[idx].updatedAt = Date()
+            }
+        }
+        collapseIfNoPending()
+    }
+
     /// Auto-collapse session list when no more pending items
     private func collapseIfNoPending() {
         let hasPending = agents.contains {

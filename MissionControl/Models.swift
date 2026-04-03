@@ -89,6 +89,7 @@ struct AgentQuestion: Identifiable {
     var id: String  // agent id + timestamp
     var question: String
     var options: [QuestionOption]
+    var isFreeInput: Bool  // true = text input, false = numbered options
     var detectedAt: Date
 
     struct QuestionOption: Identifiable {

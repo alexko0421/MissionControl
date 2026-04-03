@@ -78,36 +78,61 @@ enum TMuxBridge {
             }
         }
 
-        // Also check for simple "? question [y/n]" or "Do you want to proceed?" patterns
-        if options.isEmpty {
-            for line in lines.suffix(5) {
-                let trimmed = line.trimmingCharacters(in: .whitespaces)
-                // "Esc to cancel" is a Claude Code prompt indicator
-                if trimmed.contains("Esc to cancel") {
-                    // This is a Claude Code interactive prompt — but options were already parsed above
-                    // If no numbered options found, it might be a yes/no style
-                    break
-                }
+        // If we found numbered options, return them
+        if !options.isEmpty {
+            let question = questionLine ?? "Choose an option"
+            let agentOptions = options.map { opt in
+                AgentQuestion.QuestionOption(
+                    id: opt.number,
+                    label: opt.label,
+                    isHighlighted: opt.highlighted
+                )
             }
-        }
-
-        guard !options.isEmpty else { return nil }
-
-        let question = questionLine ?? "Choose an option"
-        let agentOptions = options.map { opt in
-            AgentQuestion.QuestionOption(
-                id: opt.number,
-                label: opt.label,
-                isHighlighted: opt.highlighted
+            return AgentQuestion(
+                id: "\(target)-\(Int(Date().timeIntervalSince1970))",
+                question: question,
+                options: agentOptions,
+                isFreeInput: false,
+                detectedAt: Date()
             )
         }
 
-        return AgentQuestion(
-            id: "\(target)-\(Int(Date().timeIntervalSince1970))",
-            question: question,
-            options: agentOptions,
-            detectedAt: Date()
-        )
+        // Check for free-text input prompts (AskUserQuestion, etc.)
+        // Look for patterns like:
+        //   - Lines ending with "?" followed by an input cursor (❯, >, or empty prompt)
+        //   - "Esc to cancel" indicator
+        //   - A question followed by empty input area
+        let lastLines = lines.suffix(8)
+        var detectedQuestion: String? = nil
+
+        for line in lastLines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+            // Detect question lines (ending with ? or ？)
+            if trimmed.hasSuffix("?") || trimmed.hasSuffix("？") || trimmed.hasSuffix("呢") || trimmed.hasSuffix("吗") || trimmed.hasSuffix("嗎") {
+                detectedQuestion = trimmed
+            }
+        }
+
+        // Check for Claude Code input indicators in the last few lines
+        let hasInputIndicator = lastLines.contains { line in
+            let t = line.trimmingCharacters(in: .whitespaces)
+            return t == "❯" || t == ">" || t == "›" ||
+                   t.contains("Esc to cancel") || t.contains("esc to interrupt") ||
+                   t.contains("Tab to amend")
+        }
+
+        if let question = detectedQuestion, hasInputIndicator {
+            return AgentQuestion(
+                id: "\(target)-\(Int(Date().timeIntervalSince1970))",
+                question: question,
+                options: [],
+                isFreeInput: true,
+                detectedAt: Date()
+            )
+        }
+
+        return nil
     }
 
     // MARK: - Private
