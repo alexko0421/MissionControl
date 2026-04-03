@@ -383,9 +383,9 @@ class AgentStore: ObservableObject {
 
     private func triggerAlert(for agent: Agent) {
         let now = Date()
-        // Debounce: skip if alerted within last 5 seconds
+        // Debounce: skip if alerted within last 30 seconds for the same agent
         if let lastAlert = lastAlertTimes[agent.id],
-           now.timeIntervalSince(lastAlert) < 5 {
+           now.timeIntervalSince(lastAlert) < 30 {
             return
         }
         // Focus mode: only alert for focused agent (or all if no focus)
