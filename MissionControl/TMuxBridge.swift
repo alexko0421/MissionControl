@@ -8,7 +8,7 @@ enum TMuxBridge {
 
     // Capture last N lines from a tmux pane and return as TerminalLines
     static func capturePane(target: String, lastLines: Int = 30) -> [TerminalLine] {
-        let output = shell("tmux capture-pane -t \"\(target)\" -p -S -\(lastLines) 2>/dev/null")
+        let output = shell("/opt/homebrew/bin/tmux capture-pane -t \"\(target)\" -p -S -\(lastLines) 2>/dev/null")
         guard !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
         return output
             .components(separatedBy: "\n")
@@ -22,12 +22,12 @@ enum TMuxBridge {
     // Send a command string to a tmux pane
     static func sendKeys(target: String, command: String) {
         let escaped = command.replacingOccurrences(of: "\"", with: "\\\"")
-        _ = shell("tmux send-keys -t \"\(target)\" \"\(escaped)\" Enter 2>/dev/null")
+        _ = shell("/opt/homebrew/bin/tmux send-keys -t \"\(target)\" \"\(escaped)\" Enter 2>/dev/null")
     }
 
     // List active tmux sessions
     static func listSessions() -> [String] {
-        let output = shell("tmux ls -F '#{session_name}' 2>/dev/null")
+        let output = shell("/opt/homebrew/bin/tmux ls -F '#{session_name}' 2>/dev/null")
         return output.components(separatedBy: "\n").filter { !$0.isEmpty }
     }
 
@@ -36,7 +36,7 @@ enum TMuxBridge {
     /// Parse the last N lines of a tmux pane looking for interactive prompts.
     /// Detects: numbered options, y/n, arrow-select, diff approval, free-text input.
     static func detectPrompt(target: String) -> AgentQuestion? {
-        let output = shell("tmux capture-pane -t \"\(target)\" -p -S -30 2>/dev/null")
+        let output = shell("/opt/homebrew/bin/tmux capture-pane -t \"\(target)\" -p -S -30 2>/dev/null")
         let allLines = output.components(separatedBy: "\n")
         let lines = allLines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
         guard !lines.isEmpty else { return nil }

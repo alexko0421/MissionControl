@@ -479,7 +479,7 @@ struct SessionListPanel: View {
                     // Jump to agent's terminal
                     if let target = agent.tmuxTarget, agent.tmuxSession != nil {
                         Task.detached {
-                            let cmd = "tmux select-window -t \"\(target)\" 2>/dev/null; tmux select-pane -t \"\(target)\" 2>/dev/null"
+                            let cmd = "/opt/homebrew/bin/tmux select-window -t \"\(target)\" 2>/dev/null; /opt/homebrew/bin/tmux select-pane -t \"\(target)\" 2>/dev/null"
                             let p = Process()
                             p.executableURL = URL(fileURLWithPath: "/bin/zsh")
                             p.arguments = ["-c", cmd]
@@ -689,7 +689,7 @@ struct SummaryPanel: View {
         // Try tmux first
         if let target = agent.tmuxTarget, agent.tmuxSession != nil {
             Task.detached {
-                let selectCmd = "tmux select-window -t \"\(target)\" 2>/dev/null; tmux select-pane -t \"\(target)\" 2>/dev/null"
+                let selectCmd = "/opt/homebrew/bin/tmux select-window -t \"\(target)\" 2>/dev/null; /opt/homebrew/bin/tmux select-pane -t \"\(target)\" 2>/dev/null"
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/bin/zsh")
                 process.arguments = ["-c", selectCmd]
