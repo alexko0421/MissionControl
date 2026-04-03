@@ -20,6 +20,12 @@ class AgentStore: ObservableObject {
 
     @Published var viewState: ViewState = .terminal
 
+    // Bottom tab mode
+    enum TabMode: String, CaseIterable {
+        case monitor, approve, ask, jump
+    }
+    @Published var activeTab: TabMode = .monitor
+
     // Alert state — drives pill flash + sound
     @Published var activeAlert: AgentAlert? = nil
 
@@ -146,8 +152,8 @@ class AgentStore: ObservableObject {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             self.agents[idx].pendingQuestion = prompt
                         }
-                        self.showSessionList()
                         self.triggerAlert(for: self.agents[idx])
+                        self.autoSwitchTab()
                     }
                     // Clear question if agent is no longer blocked
                     if self.agents[idx].status != .blocked && self.agents[idx].pendingQuestion != nil {
@@ -304,8 +310,8 @@ class AgentStore: ObservableObject {
                 agents[idx].updatedAt = Date()
             }
             triggerAlert(for: agents[idx])
-            // Auto-expand session list so user sees the permission card
-            showSessionList()
+            // Auto-switch to Approve tab
+            autoSwitchTab()
         }
     }
 
@@ -329,8 +335,7 @@ class AgentStore: ObservableObject {
                 agents[idx].updatedAt = Date()
             }
             triggerAlert(for: agents[idx])
-            // Auto-expand session list so user sees the plan review card
-            showSessionList()
+            autoSwitchTab()
         }
     }
 
@@ -464,12 +469,42 @@ class AgentStore: ObservableObject {
         collapseIfNoPending()
     }
 
-    /// Auto-collapse session list when no more pending items
+    // MARK: - Tab Helpers
+
+    /// Agents needing approval (permission or plan)
+    var approveAgents: [Agent] {
+        agents.filter { $0.pendingPermission != nil || $0.pendingPlan != nil }
+    }
+
+    /// Agents with pending questions
+    var askAgents: [Agent] {
+        agents.filter { $0.pendingQuestion != nil }
+    }
+
+    /// Switch to appropriate tab and auto-expand
+    func autoSwitchTab() {
+        if !approveAgents.isEmpty {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                activeTab = .approve
+            }
+            showSessionList()
+        } else if !askAgents.isEmpty {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                activeTab = .ask
+            }
+            showSessionList()
+        }
+    }
+
+    /// Auto-collapse or switch back to monitor when no more pending items
     private func collapseIfNoPending() {
         let hasPending = agents.contains {
             $0.pendingPermission != nil || $0.pendingPlan != nil || $0.pendingQuestion != nil
         }
         if !hasPending {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                activeTab = .monitor
+            }
             showTerminal()
         }
     }

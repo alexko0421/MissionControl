@@ -270,86 +270,46 @@ struct SessionListPanel: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            if store.sortedAgents.isEmpty {
-                // Empty state
-                VStack(spacing: 10) {
-                    Image(systemName: "moon.zzz.fill")
-                        .font(.system(size: 28))
-                        .foregroundStyle(.white.opacity(0.25))
-                    Text(isEn ? "No active sessions" : "暂无活跃任务")
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.4))
-                    Text(isEn ? "Start an AI coding session to see it here" : "启动 AI 编程任务后将自动显示")
-                        .font(.system(size: 12, weight: .regular, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.25))
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.vertical, 24)
-                .frame(maxWidth: .infinity)
-            } else {
-                let groupedAgents = Dictionary(grouping: store.sortedAgents, by: { $0.displayApp })
-                let priorityOrder: [AgentStatus] = [.blocked, .running, .done, .idle]
-                let sortedKeys = groupedAgents.keys.sorted { a, b in
-                    let bestA = groupedAgents[a]!.compactMap { ag in priorityOrder.firstIndex(of: ag.status) }.min() ?? 99
-                    let bestB = groupedAgents[b]!.compactMap { ag in priorityOrder.firstIndex(of: ag.status) }.min() ?? 99
-                    if bestA != bestB { return bestA < bestB }
-                    return a < b
-                }
-
-                ForEach(sortedKeys, id: \.self) { appName in
-                    if let agents = groupedAgents[appName] {
-                        HStack(spacing: 6) {
-                            Image(systemName: agents[0].appIcon)
-                                .font(.system(size: 10))
-                            Text(appName.uppercased())
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
-                                .tracking(1)
-                            Spacer()
-                        }
-                        .foregroundStyle(.white.opacity(0.35))
-                        .padding(.horizontal, 14)
-                        .padding(.top, 8)
-                        .padding(.bottom, 2)
-
-                        ForEach(agents) { agent in
-                            SessionRow(agent: agent)
-                                .onTapGesture {
-                                    withAnimation(.spring(response: 0.55, dampingFraction: 0.9)) {
-                                        store.showSummary(for: agent.id)
-                                    }
-                                }
-                        }
-                    }
-                }
+            // Tab content
+            switch store.activeTab {
+            case .monitor:
+                monitorView
+            case .approve:
+                approveView
+            case .ask:
+                askView
+            case .jump:
+                jumpView
             }
-            
+
             Divider()
                 .background(Color.white.opacity(0.1))
                 .padding(.vertical, 2)
 
             // Bottom Tab Bar
             HStack(spacing: 0) {
-                TabBarButton(icon: "square.grid.2x2", label: "Monitor", isActive: true) {
-                    // Already in monitor view
+                TabBarButton(icon: "square.grid.2x2", label: "Monitor",
+                    isActive: store.activeTab == .monitor
+                ) {
+                    withAnimation(.easeInOut(duration: 0.2)) { store.activeTab = .monitor }
                 }
                 TabBarButton(icon: "checkmark.shield", label: "Approve",
-                    isActive: false,
-                    badge: store.agents.filter({ $0.pendingPermission != nil || $0.pendingQuestion != nil }).count
+                    isActive: store.activeTab == .approve,
+                    badge: store.approveAgents.count
                 ) {
-                    // Scroll to first pending approval
+                    withAnimation(.easeInOut(duration: 0.2)) { store.activeTab = .approve }
                 }
                 TabBarButton(icon: "bubble.left.fill", label: "Ask",
-                    isActive: false,
-                    badge: store.agents.filter({ $0.pendingQuestion?.isFreeInput == true }).count
+                    isActive: store.activeTab == .ask,
+                    badge: store.askAgents.count
                 ) {
-                    // Scroll to first question
+                    withAnimation(.easeInOut(duration: 0.2)) { store.activeTab = .ask }
                 }
-                TabBarButton(icon: "arrow.right.square", label: "Jump", isActive: false) {
-                    if let agent = store.priorityAgent {
-                        store.showSummary(for: agent.id)
-                    }
+                TabBarButton(icon: "arrow.right.square", label: "Jump",
+                    isActive: store.activeTab == .jump
+                ) {
+                    withAnimation(.easeInOut(duration: 0.2)) { store.activeTab = .jump }
                 }
-                // Settings gear at the end
                 Button(action: {
                     withAnimation(.spring(response: 0.55, dampingFraction: 0.9)) {
                         store.viewState = .settings
@@ -364,6 +324,7 @@ struct SessionListPanel: View {
             }
             .padding(.horizontal, 4)
         }
+        .animation(.easeInOut(duration: 0.2), value: store.activeTab)
         .padding(10)
         .frame(width: 360)
         .background(.thinMaterial)
@@ -377,6 +338,195 @@ struct SessionListPanel: View {
         .environment(\.colorScheme, .dark)
         .onAppear { Agent.displayLanguage = appLanguage }
         .onChange(of: appLanguage) { Agent.displayLanguage = $0 }
+    }
+
+    // MARK: - Monitor Tab (session list)
+
+    @ViewBuilder
+    private var monitorView: some View {
+        if store.sortedAgents.isEmpty {
+            VStack(spacing: 10) {
+                Image(systemName: "moon.zzz.fill")
+                    .font(.system(size: 28))
+                    .foregroundStyle(.white.opacity(0.25))
+                Text(isEn ? "No active sessions" : "暂无活跃任务")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.4))
+            }
+            .padding(.vertical, 24)
+            .frame(maxWidth: .infinity)
+        } else {
+            let groupedAgents = Dictionary(grouping: store.sortedAgents, by: { $0.displayApp })
+            let priorityOrder: [AgentStatus] = [.blocked, .running, .done, .idle]
+            let sortedKeys = groupedAgents.keys.sorted { a, b in
+                let bestA = groupedAgents[a]!.compactMap { ag in priorityOrder.firstIndex(of: ag.status) }.min() ?? 99
+                let bestB = groupedAgents[b]!.compactMap { ag in priorityOrder.firstIndex(of: ag.status) }.min() ?? 99
+                if bestA != bestB { return bestA < bestB }
+                return a < b
+            }
+
+            ForEach(sortedKeys, id: \.self) { appName in
+                if let agents = groupedAgents[appName] {
+                    HStack(spacing: 6) {
+                        Image(systemName: agents[0].appIcon)
+                            .font(.system(size: 10))
+                        Text(appName.uppercased())
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .tracking(1)
+                        Spacer()
+                    }
+                    .foregroundStyle(.white.opacity(0.35))
+                    .padding(.horizontal, 14)
+                    .padding(.top, 8)
+                    .padding(.bottom, 2)
+
+                    ForEach(agents) { agent in
+                        SessionRow(agent: agent)
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.55, dampingFraction: 0.9)) {
+                                    store.showSummary(for: agent.id)
+                                }
+                            }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Approve Tab (permission/plan review)
+
+    @ViewBuilder
+    private var approveView: some View {
+        let pendingAgents = store.approveAgents
+        if pendingAgents.isEmpty {
+            VStack(spacing: 10) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundStyle(Color(red: 0.365, green: 0.792, blue: 0.647).opacity(0.4))
+                Text(isEn ? "Nothing to approve" : "暂无待审批")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.4))
+            }
+            .padding(.vertical, 24)
+            .frame(maxWidth: .infinity)
+        } else {
+            ForEach(pendingAgents) { agent in
+                if let permission = agent.pendingPermission {
+                    PermissionCardView(agent: agent, permission: permission)
+                }
+                if let plan = agent.pendingPlan {
+                    PlanReviewView(agent: agent, plan: plan)
+                }
+            }
+        }
+    }
+
+    // MARK: - Ask Tab (questions)
+
+    @ViewBuilder
+    private var askView: some View {
+        let questionAgents = store.askAgents
+        if questionAgents.isEmpty {
+            VStack(spacing: 10) {
+                Image(systemName: "bubble.left.fill")
+                    .font(.system(size: 28))
+                    .foregroundStyle(.white.opacity(0.25))
+                Text(isEn ? "No questions" : "暂无问题")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.4))
+            }
+            .padding(.vertical, 24)
+            .frame(maxWidth: .infinity)
+        } else {
+            ForEach(questionAgents) { agent in
+                if let question = agent.pendingQuestion {
+                    // Agent name header
+                    HStack(spacing: 6) {
+                        StatusDot(status: agent.status)
+                        Text(agent.name)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.8))
+                        AgentBadge(label: agent.agentTypeLabel)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.top, 6)
+
+                    QuestionCardView(agent: agent, question: question)
+                }
+            }
+        }
+    }
+
+    // MARK: - Jump Tab
+
+    @ViewBuilder
+    private var jumpView: some View {
+        if store.sortedAgents.isEmpty {
+            VStack(spacing: 10) {
+                Image(systemName: "arrow.right.square")
+                    .font(.system(size: 28))
+                    .foregroundStyle(.white.opacity(0.25))
+                Text(isEn ? "No sessions to jump to" : "暂无可跳转任务")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.4))
+            }
+            .padding(.vertical, 24)
+            .frame(maxWidth: .infinity)
+        } else {
+            ForEach(store.sortedAgents) { agent in
+                Button(action: {
+                    // Jump to agent's terminal
+                    if let target = agent.tmuxTarget, agent.tmuxSession != nil {
+                        Task.detached {
+                            let cmd = "tmux select-window -t \"\(target)\" 2>/dev/null; tmux select-pane -t \"\(target)\" 2>/dev/null"
+                            let p = Process()
+                            p.executableURL = URL(fileURLWithPath: "/bin/zsh")
+                            p.arguments = ["-c", cmd]
+                            try? p.run()
+                            p.waitUntilExit()
+                            SummaryPanel.runAppleScript("tell application \"Terminal\" to activate")
+                        }
+                    } else {
+                        let appName = agent.app ?? "Terminal"
+                        NSWorkspace.shared.runningApplications.first {
+                            $0.localizedName == appName || $0.bundleIdentifier?.localizedCaseInsensitiveContains(appName.lowercased()) == true
+                        }?.activate()
+                    }
+                }) {
+                    HStack(spacing: 8) {
+                        StatusDot(status: agent.status)
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Text(agent.name)
+                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(.white.opacity(0.9))
+                                    .lineLimit(1)
+                                AgentBadge(label: agent.agentTypeLabel)
+                                AgentBadge(label: agent.displayApp)
+                            }
+                            if agent.status == .done {
+                                Text(isEn ? "Done — click to jump" : "已完成 — 点击跳转")
+                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                                    .foregroundStyle(Color(red: 0.204, green: 0.827, blue: 0.600))
+                            } else {
+                                Text(agent.task)
+                                    .font(.system(size: 11, design: .rounded))
+                                    .foregroundStyle(.white.opacity(0.5))
+                                    .lineLimit(1)
+                            }
+                        }
+                        Spacer()
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.3))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 }
 
@@ -443,28 +593,7 @@ struct SessionRow: View {
                 store.startFocus(agentId: agent.id)
             }
             .contentShape(Rectangle())
-
-            // Permission card (inline)
-            if let permission = agent.pendingPermission {
-                PermissionCardView(agent: agent, permission: permission)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: UnitPoint.top)))
-            }
-
-            // Plan review card (inline)
-            if let plan = agent.pendingPlan {
-                PlanReviewView(agent: agent, plan: plan)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: UnitPoint.top)))
-            }
-
-            // Detected question card (inline)
-            if let question = agent.pendingQuestion {
-                QuestionCardView(agent: agent, question: question)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: UnitPoint.top)))
-            }
         }
-        .animation(.spring(response: 0.5, dampingFraction: 0.85), value: agent.pendingPermission?.id)
-        .animation(.spring(response: 0.5, dampingFraction: 0.85), value: agent.pendingPlan?.id)
-        .animation(.spring(response: 0.5, dampingFraction: 0.85), value: agent.pendingQuestion?.id)
     }
 }
 
