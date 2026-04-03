@@ -511,11 +511,12 @@ class AgentStore: ObservableObject {
     /// Type text into a terminal app using AppleScript keystroke injection
     nonisolated static func typeInTerminal(text: String, appName: String) {
         let escaped = text.replacingOccurrences(of: "\"", with: "\\\"")
+        // Use System Events to type into the frontmost terminal process
         let script = """
-        tell application "\(appName)"
-            activate
-            delay 0.3
-            tell application "System Events"
+        tell application "System Events"
+            tell process "\(appName)"
+                set frontmost to true
+                delay 0.3
                 keystroke "\(escaped)"
                 keystroke return
             end tell
