@@ -325,27 +325,44 @@ struct SessionListPanel: View {
             
             Divider()
                 .background(Color.white.opacity(0.1))
-                .padding(.vertical, 4)
-            
-            HStack {
-                Spacer()
+                .padding(.vertical, 2)
+
+            // Bottom Tab Bar
+            HStack(spacing: 0) {
+                TabBarButton(icon: "square.grid.2x2", label: "Monitor", isActive: true) {
+                    // Already in monitor view
+                }
+                TabBarButton(icon: "checkmark.shield", label: "Approve",
+                    isActive: false,
+                    badge: store.agents.filter({ $0.pendingPermission != nil || $0.pendingQuestion != nil }).count
+                ) {
+                    // Scroll to first pending approval
+                }
+                TabBarButton(icon: "bubble.left.fill", label: "Ask",
+                    isActive: false,
+                    badge: store.agents.filter({ $0.pendingQuestion?.isFreeInput == true }).count
+                ) {
+                    // Scroll to first question
+                }
+                TabBarButton(icon: "arrow.right.square", label: "Jump", isActive: false) {
+                    if let agent = store.priorityAgent {
+                        store.showSummary(for: agent.id)
+                    }
+                }
+                // Settings gear at the end
                 Button(action: {
                     withAnimation(.spring(response: 0.55, dampingFraction: 0.9)) {
                         store.viewState = .settings
                     }
                 }) {
                     Image(systemName: "gearshape.fill")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.6))
-                        .padding(4)
-                        .background(Color.white.opacity(0.001))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.4))
+                        .frame(width: 30, height: 30)
                 }
                 .buttonStyle(.plain)
-                .onHover { hovering in
-                    NSCursor.pointingHand.set()
-                }
             }
-            .padding(.trailing, 4)
+            .padding(.horizontal, 4)
         }
         .padding(10)
         .frame(width: 360)
@@ -374,11 +391,17 @@ struct SessionRow: View {
             HStack(spacing: 8) {
                 StatusDot(status: agent.status)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(agent.name)
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white.opacity(isHovered ? 1.0 : 0.95))
-                        .lineLimit(1)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(agent.name)
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white.opacity(isHovered ? 1.0 : 0.95))
+                            .lineLimit(1)
+
+                        // Agent type + terminal badges
+                        AgentBadge(label: agent.agentTypeLabel)
+                        AgentBadge(label: agent.displayApp)
+                    }
 
                     Text(agent.task)
                         .font(.system(size: 13, weight: .regular, design: .rounded))
@@ -632,6 +655,63 @@ struct SummaryPanel: View {
         process.waitUntilExit()
         let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
         return output == "true"
+    }
+}
+
+// MARK: - Tab Bar Button
+
+struct TabBarButton: View {
+    let icon: String
+    let label: String
+    let isActive: Bool
+    var badge: Int = 0
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 2) {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: icon)
+                        .font(.system(size: 13, weight: isActive ? .semibold : .regular))
+                    if badge > 0 {
+                        Text("\(badge)")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 14, height: 14)
+                            .background(Color(red: 0.937, green: 0.267, blue: 0.267))
+                            .clipShape(Circle())
+                            .offset(x: 6, y: -4)
+                    }
+                }
+                Text(label)
+                    .font(.system(size: 9, weight: .medium, design: .rounded))
+            }
+            .foregroundStyle(.white.opacity(isActive ? 0.9 : (isHovered ? 0.6 : 0.4)))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 4)
+            .background(isActive ? Color.white.opacity(0.08) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+    }
+}
+
+// MARK: - Agent Badge
+
+struct AgentBadge: View {
+    let label: String
+
+    var body: some View {
+        Text(label)
+            .font(.system(size: 9, weight: .semibold, design: .rounded))
+            .foregroundStyle(.white.opacity(0.55))
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2)
+            .background(Color.white.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 }
 

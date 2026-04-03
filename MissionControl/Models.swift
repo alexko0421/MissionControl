@@ -153,6 +153,17 @@ struct Agent: Identifiable, Codable {
         return "\(session):\(tmuxWindow ?? 0).\(tmuxPane ?? 0)"
     }
 
+    var agentTypeLabel: String {
+        switch agentType?.lowercased() {
+        case "claude-code": return "Claude"
+        case "codex": return "Codex"
+        case "gemini-cli": return "Gemini"
+        case "cursor": return "Cursor"
+        case "opencode": return "OpenCode"
+        default: return agentType?.capitalized ?? "Agent"
+        }
+    }
+
     // MARK: - UI Helpers for Categorization
     
     var displayApp: String {

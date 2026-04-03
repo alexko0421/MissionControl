@@ -16,6 +16,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: FloatingPanel!
     private var store = AgentStore()
     private var globalMonitor: Any?
+    private var localMonitor: Any?
     private var statusItem: NSStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -52,6 +53,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Start data watching
         store.startWatching()
 
+        // Register keyboard shortcuts (⌘1-9 for options, ⌘Y/⌘N for approve/deny)
+        registerShortcuts()
+
         // Show in Dock and menu bar
         NSApp.setActivationPolicy(.regular)
 
@@ -60,6 +64,77 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Global hotkey disabled for now
         // registerGlobalHotkey()
+    }
+
+    private func registerShortcuts() {
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self = self else { return event }
+            // Only handle ⌘ shortcuts
+            guard event.modifierFlags.contains(.command) else { return event }
+
+            let key = event.charactersIgnoringModifiers?.lowercased() ?? ""
+
+            // ⌘Y = approve/allow
+            if key == "y" {
+                Task { @MainActor in self.handleApproveShortcut() }
+                return nil
+            }
+            // ⌘N = deny/reject
+            if key == "n" {
+                Task { @MainActor in self.handleDenyShortcut() }
+                return nil
+            }
+            // ⌘1-9 = select option
+            if let num = Int(key), num >= 1 && num <= 9 {
+                Task { @MainActor in self.handleOptionShortcut(num) }
+                return nil
+            }
+
+            return event
+        }
+    }
+
+    @MainActor
+    private func handleApproveShortcut() {
+        // Find first agent with pending question/permission and approve
+        if let agent = store.agents.first(where: { $0.pendingQuestion != nil }) {
+            if let q = agent.pendingQuestion {
+                if let yesOpt = q.options.first(where: { $0.sendKey == "y" || $0.sendKey == "1" || $0.sendKey == "Enter" }) {
+                    store.respondQuestion(agentId: agent.id, option: yesOpt)
+                    return
+                }
+            }
+        }
+        if let agent = store.agents.first(where: { $0.pendingPermission != nil }),
+           let perm = agent.pendingPermission {
+            store.respondPermission(agentId: agent.id, requestId: perm.id, choice: .yes)
+        }
+    }
+
+    @MainActor
+    private func handleDenyShortcut() {
+        if let agent = store.agents.first(where: { $0.pendingQuestion != nil }) {
+            if let q = agent.pendingQuestion {
+                if let noOpt = q.options.first(where: { $0.sendKey == "n" || $0.sendKey == "3" }) ?? q.options.last {
+                    store.respondQuestion(agentId: agent.id, option: noOpt)
+                    return
+                }
+            }
+        }
+        if let agent = store.agents.first(where: { $0.pendingPermission != nil }),
+           let perm = agent.pendingPermission {
+            store.respondPermission(agentId: agent.id, requestId: perm.id, choice: .no)
+        }
+    }
+
+    @MainActor
+    private func handleOptionShortcut(_ num: Int) {
+        if let agent = store.agents.first(where: { $0.pendingQuestion != nil }) {
+            if let q = agent.pendingQuestion,
+               let opt = q.options.first(where: { $0.id == num }) {
+                store.respondQuestion(agentId: agent.id, option: opt)
+            }
+        }
     }
 
     private func setupStatusBar() {

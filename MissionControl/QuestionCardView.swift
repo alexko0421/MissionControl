@@ -22,13 +22,20 @@ struct QuestionCardView: View {
             // Diff preview (if applicable)
             if let diff = question.diffContext {
                 ScrollView {
-                    Text(diff)
-                        .font(.system(size: 11, weight: .regular, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.75))
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 1) {
+                        ForEach(Array(diff.components(separatedBy: "\n").enumerated()), id: \.offset) { _, line in
+                            Text(line)
+                                .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                .foregroundStyle(diffLineColor(line))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 1)
+                                .background(diffLineBg(line))
+                        }
+                    }
                 }
-                .frame(maxHeight: 120)
-                .padding(8)
+                .frame(maxHeight: 150)
+                .padding(4)
                 .background(Color.black.opacity(0.3))
                 .clipShape(RoundedRectangle(cornerRadius: 6))
             }
@@ -140,6 +147,18 @@ struct QuestionCardView: View {
 
                         Spacer()
 
+                        // Keyboard shortcut hint
+                        if question.promptType == .yesNo || question.promptType == .diff {
+                            let isYes = option.sendKey == "y" || option.sendKey == "Enter"
+                            Text(isYes ? "⌘Y" : "⌘N")
+                                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(.white.opacity(0.3))
+                        } else if question.promptType == .numbered && option.id <= 9 {
+                            Text("⌘\(option.id)")
+                                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(.white.opacity(0.3))
+                        }
+
                         if option.isHighlighted {
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 9, weight: .bold))
@@ -198,5 +217,20 @@ struct QuestionCardView: View {
         guard !freeText.isEmpty else { return }
         store.respondFreeText(agentId: agent.id, text: freeText)
         freeText = ""
+    }
+
+    // MARK: - Diff Colors
+
+    private func diffLineColor(_ line: String) -> Color {
+        if line.hasPrefix("+") { return Color(red: 0.365, green: 0.792, blue: 0.647) }
+        if line.hasPrefix("-") { return Color(red: 0.886, green: 0.294, blue: 0.290) }
+        if line.hasPrefix("@@") { return Color(red: 0.365, green: 0.631, blue: 0.847) }
+        return .white.opacity(0.6)
+    }
+
+    private func diffLineBg(_ line: String) -> Color {
+        if line.hasPrefix("+") { return Color(red: 0.204, green: 0.827, blue: 0.600).opacity(0.08) }
+        if line.hasPrefix("-") { return Color(red: 0.937, green: 0.267, blue: 0.267).opacity(0.08) }
+        return .clear
     }
 }
