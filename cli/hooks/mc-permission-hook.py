@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Claude Code PreToolUse hook — delegates permission approval to MissionControl.
-
-This hook blocks until MissionControl approves or denies the tool request, then
-prints the JSON response Claude Code expects on stdout.
-"""
+"""Claude Code PermissionRequest hook — delegates approvals to MissionControl."""
 
 import json
 import os
@@ -25,17 +21,17 @@ def main():
         return
 
     cwd = hook_input.get("cwd", "")
+    session_id = hook_input.get("session_id", "")
     if not cwd:
         return
 
     tool_name = hook_input.get("tool_name", "Unknown")
     tool_input = hook_input.get("tool_input", {})
-
     if not isinstance(tool_input, dict):
         tool_input = {"command": str(tool_input)}
 
-    agent_id = hashlib.md5(cwd.encode()).hexdigest()[:8]
-    request_id = f"req_{uuid.uuid4().hex[:12]}"
+    agent_id = session_id[:8] if session_id else hashlib.md5(cwd.encode()).hexdigest()[:8]
+    request_id = f"perm_{uuid.uuid4().hex[:12]}"
 
     cmd = [
         sys.executable,
@@ -52,12 +48,13 @@ def main():
     ]
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, timeout=300, capture_output=True, text=True)
         if result.stdout.strip():
             print(result.stdout.strip())
-    except Exception:
-        # If the bridge fails unexpectedly, let Claude Code fall back to its default behavior.
-        return
+        else:
+            print(json.dumps({"approve": True}))
+    except subprocess.TimeoutExpired:
+        print(json.dumps({"approve": True}))
 
 
 if __name__ == "__main__":

@@ -11,9 +11,6 @@ import select
 SOCKET_PATH = os.path.expanduser("~/.mission-control/mc.sock")
 STATUS_DIR = os.path.expanduser("~/.mission-control")
 STATUS_FILE = os.path.join(STATUS_DIR, "status.json")
-TIMEOUT = 10
-
-
 def send_and_receive(message, wait_for_response=False):
     try:
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -24,15 +21,9 @@ def send_and_receive(message, wait_for_response=False):
             sock.close()
             return None
 
-        sock.setblocking(False)
-        ready, _, _ = select.select([sock], [], [], TIMEOUT)
-        if not ready:
-            sock.close()
-            return {"decision": "approve"}
-
         data = b""
         while True:
-            ready, _, _ = select.select([sock], [], [], 1)
+            ready, _, _ = select.select([sock], [], [])
             if not ready:
                 break
             chunk = sock.recv(4096)

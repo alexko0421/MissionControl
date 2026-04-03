@@ -10,9 +10,10 @@ struct ContentView: View {
                 .zIndex(2)
 
             // Expanded content (session list or summary) container
-            VStack(spacing: 0) {
-                if case .sessionList = store.viewState {
-                    SessionListPanel()
+            ZStack(alignment: .top) {
+                if let alert = store.activeAlert {
+                    AgentAlertPanel(alert: alert)
+                        .zIndex(10)
                         .transition(
                             .asymmetric(
                                 insertion: .opacity
@@ -23,11 +24,39 @@ struct ContentView: View {
                                     .combined(with: .scale(scale: 0.95, anchor: .top))
                             )
                         )
-                }
+                } else {
+                    if case .sessionList = store.viewState {
+                        SessionListPanel()
+                            .transition(
+                                .asymmetric(
+                                    insertion: .opacity
+                                        .combined(with: .offset(y: -20))
+                                        .combined(with: .scale(scale: 0.95, anchor: .top)),
+                                    removal: .opacity
+                                        .combined(with: .offset(y: -15))
+                                        .combined(with: .scale(scale: 0.95, anchor: .top))
+                                )
+                            )
+                    }
 
-                if case .summary(let agentId) = store.viewState {
-                    if let agent = store.agents.first(where: { $0.id == agentId }) {
-                        SummaryPanel(agent: agent)
+                    if case .summary(let agentId) = store.viewState {
+                        if let agent = store.agents.first(where: { $0.id == agentId }) {
+                            SummaryPanel(agent: agent)
+                                .transition(
+                                    .asymmetric(
+                                        insertion: .opacity
+                                            .combined(with: .offset(y: -20))
+                                            .combined(with: .scale(scale: 0.95, anchor: .top)),
+                                        removal: .opacity
+                                            .combined(with: .offset(y: -15))
+                                            .combined(with: .scale(scale: 0.95, anchor: .top))
+                                    )
+                                )
+                        }
+                    }
+                    
+                    if case .settings = store.viewState {
+                        SettingsInlinePanel()
                             .transition(
                                 .asymmetric(
                                     insertion: .opacity
@@ -40,25 +69,58 @@ struct ContentView: View {
                             )
                     }
                 }
-                
-                if case .settings = store.viewState {
-                    SettingsInlinePanel()
-                        .transition(
-                            .asymmetric(
-                                insertion: .opacity
-                                    .combined(with: .offset(y: -20))
-                                    .combined(with: .scale(scale: 0.95, anchor: .top)),
-                                removal: .opacity
-                                    .combined(with: .offset(y: -15))
-                                    .combined(with: .scale(scale: 0.95, anchor: .top))
-                            )
-                        )
-                }
             }
             .zIndex(1)
         }
         .animation(.spring(response: 0.6, dampingFraction: 0.85), value: store.viewStateKey)
         .fixedSize()
+    }
+}
+
+// MARK: - In-App Alert Panel
+struct AgentAlertPanel: View {
+    let alert: AgentStore.AgentAlert
+    @AppStorage("appLanguage") private var appLanguage = "Auto"
+    private var isEn: Bool { appLanguage == "En" }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            StatusDot(status: alert.newStatus)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(alert.agentName)
+                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.white)
+                
+                Text(alert.task)
+                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            
+            Spacer(minLength: 8)
+            
+            Text(alert.newStatus.label)
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundColor(alert.newStatus.color)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(alert.newStatus.color.opacity(0.15), in: Capsule())
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(width: 360)
+        .background(.ultraThinMaterial)
+        .background(Color.black.opacity(0.75))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(alert.newStatus.color.opacity(0.35), lineWidth: 1)
+        )
+        .shadow(color: alert.newStatus.color.opacity(0.2), radius: 15, y: 8)
+        .padding(.bottom, 12)
+        .environment(\.colorScheme, .dark)
     }
 }
 

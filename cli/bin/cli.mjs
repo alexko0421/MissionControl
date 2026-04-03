@@ -19,9 +19,13 @@ const DOWNLOAD_URL = 'https://github.com/alexko0421/MissionControl/releases/late
 const HOOK_FILES = [
   'mc-bridge.py',
   'mc-claude-hook.py',
+  'mc-permission-hook.py',
   'mc-prompt-hook.py',
-  'mc-pretool-hook.py',
   'mc-posttool-hook.py',
+];
+
+const LEGACY_HOOK_FILES = [
+  'mc-pretool-hook.py',
 ];
 
 const HOOK_CONFIG = {
@@ -48,13 +52,14 @@ const HOOK_CONFIG = {
         ],
       },
     ],
-    PreToolUse: [
+    PermissionRequest: [
       {
-        matcher: '',
+        matcher: '*',
         hooks: [
           {
             type: 'command',
-            command: `python3 ${join(HOOKS_DEST, 'mc-pretool-hook.py')}`,
+            command: `python3 ${join(HOOKS_DEST, 'mc-permission-hook.py')}`,
+            timeout: 300,
           },
         ],
       },
@@ -72,6 +77,15 @@ const HOOK_CONFIG = {
     ],
   },
 };
+
+function missionControlHookPaths() {
+  return [...HOOK_FILES, ...LEGACY_HOOK_FILES].map((file) => join(HOOKS_DEST, file));
+}
+
+function isManagedMissionControlCommand(command) {
+  if (!command) return false;
+  return missionControlHookPaths().some((hookPath) => command.includes(hookPath));
+}
 
 const CODEX_CONFIG = join(homedir(), '.codex');
 const GEMINI_CONFIG = join(homedir(), '.gemini', 'settings.json');
@@ -151,6 +165,22 @@ function setupClaudeCode() {
     }
   }
   if (!settings.hooks) settings.hooks = {};
+
+  for (const [hookName, entries] of Object.entries(settings.hooks)) {
+    const cleaned = (entries || [])
+      .map((entry) => ({
+        ...entry,
+        hooks: (entry.hooks || []).filter((hook) => !isManagedMissionControlCommand(hook.command)),
+      }))
+      .filter((entry) => entry.hooks.length > 0);
+
+    if (cleaned.length > 0) {
+      settings.hooks[hookName] = cleaned;
+    } else {
+      delete settings.hooks[hookName];
+    }
+  }
+
   for (const [hookName, hookEntries] of Object.entries(HOOK_CONFIG.hooks)) {
     if (!settings.hooks[hookName]) {
       settings.hooks[hookName] = hookEntries;
@@ -242,6 +272,14 @@ function setup() {
       console.log(`  ✓ Installed ${file}`);
     } else {
       console.log(`  ✗ Missing ${file} — skipped`);
+    }
+  }
+
+  for (const file of LEGACY_HOOK_FILES) {
+    const dest = join(HOOKS_DEST, file);
+    if (existsSync(dest)) {
+      unlinkSync(dest);
+      console.log(`  ✓ Removed legacy ${file}`);
     }
   }
 
