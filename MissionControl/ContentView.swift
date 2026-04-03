@@ -282,47 +282,22 @@ struct SessionListPanel: View {
                 jumpView
             }
 
-            Divider()
-                .background(Color.white.opacity(0.1))
-                .padding(.vertical, 2)
-
-            // Bottom Tab Bar
-            HStack(spacing: 0) {
-                TabBarButton(icon: "square.grid.2x2", label: "Monitor",
-                    isActive: store.activeTab == .monitor
-                ) {
-                    withAnimation(.easeInOut(duration: 0.2)) { store.activeTab = .monitor }
-                }
-                TabBarButton(icon: "checkmark.shield", label: "Approve",
-                    isActive: store.activeTab == .approve,
-                    badge: store.approveAgents.count
-                ) {
-                    withAnimation(.easeInOut(duration: 0.2)) { store.activeTab = .approve }
-                }
-                TabBarButton(icon: "bubble.left.fill", label: "Ask",
-                    isActive: store.activeTab == .ask,
-                    badge: store.askAgents.count
-                ) {
-                    withAnimation(.easeInOut(duration: 0.2)) { store.activeTab = .ask }
-                }
-                TabBarButton(icon: "arrow.right.square", label: "Jump",
-                    isActive: store.activeTab == .jump
-                ) {
-                    withAnimation(.easeInOut(duration: 0.2)) { store.activeTab = .jump }
-                }
+            // Settings gear (bottom right)
+            HStack {
+                Spacer()
                 Button(action: {
                     withAnimation(.spring(response: 0.55, dampingFraction: 0.9)) {
                         store.viewState = .settings
                     }
                 }) {
                     Image(systemName: "gearshape.fill")
-                        .font(.system(size: 11))
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.4))
-                        .frame(width: 30, height: 30)
+                        .padding(4)
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.horizontal, 4)
+            .padding(.trailing, 4)
         }
         .animation(.easeInOut(duration: 0.2), value: store.activeTab)
         .padding(10)
