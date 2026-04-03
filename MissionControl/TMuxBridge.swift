@@ -284,11 +284,12 @@ enum TMuxBridge {
     // MARK: - Private
 
     private static func shell(_ command: String) -> String {
+        // Use login shell to inherit PATH (includes /opt/homebrew/bin for tmux)
         let process = Process()
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = Pipe()
-        process.arguments = ["-c", command]
+        process.arguments = ["-l", "-c", command]
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
         try? process.run()
         process.waitUntilExit()
