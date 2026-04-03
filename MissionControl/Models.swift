@@ -86,16 +86,28 @@ struct PlanReview: Identifiable {
 // MARK: - Agent Question (detected from terminal)
 
 struct AgentQuestion: Identifiable {
-    var id: String  // agent id + timestamp
+    var id: String
     var question: String
     var options: [QuestionOption]
-    var isFreeInput: Bool  // true = text input, false = numbered options
+    var promptType: PromptType
+    var diffContext: String?  // for diff prompts, the diff preview
     var detectedAt: Date
 
+    var isFreeInput: Bool { promptType == .freeInput }
+
+    enum PromptType: Equatable {
+        case numbered       // 1. Yes  2. No  3. ...
+        case yesNo          // (y/n) or [Y/n]
+        case arrowSelect    // ›/> cursor selection with arrow keys
+        case diff           // Diff display + approve/reject
+        case freeInput      // Free text input
+    }
+
     struct QuestionOption: Identifiable {
-        var id: Int      // option number (1-based)
+        var id: Int
         var label: String
-        var isHighlighted: Bool  // the currently selected/highlighted option
+        var sendKey: String      // the actual key to send via TMux
+        var isHighlighted: Bool
     }
 }
 

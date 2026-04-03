@@ -429,8 +429,17 @@ class AgentStore: ObservableObject {
     func respondQuestion(agentId: String, option: AgentQuestion.QuestionOption) {
         if let idx = agents.firstIndex(where: { $0.id == agentId }) {
             if let target = agents[idx].tmuxTarget {
-                let key = "\(option.id)"
-                Task.detached { TMuxBridge.sendKeys(target: target, command: key) }
+                let sendKey = option.sendKey
+                Task.detached {
+                    // Arrow-select: may need multiple keys (e.g. "Down Down Enter")
+                    let parts = sendKey.components(separatedBy: " ")
+                    for part in parts {
+                        TMuxBridge.sendKeys(target: target, command: part)
+                        if parts.count > 1 {
+                            Thread.sleep(forTimeInterval: 0.1)
+                        }
+                    }
+                }
             }
             withAnimation(.easeInOut(duration: 0.2)) {
                 agents[idx].pendingQuestion = nil

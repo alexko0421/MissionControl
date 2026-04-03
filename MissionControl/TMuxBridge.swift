@@ -34,38 +34,53 @@ enum TMuxBridge {
     // MARK: - Prompt Detection
 
     /// Parse the last N lines of a tmux pane looking for interactive prompts.
-    /// Returns an AgentQuestion if a prompt with numbered options is detected.
+    /// Detects: numbered options, y/n, arrow-select, diff approval, free-text input.
     static func detectPrompt(target: String) -> AgentQuestion? {
-        let output = shell("tmux capture-pane -t \"\(target)\" -p -S -20 2>/dev/null")
+        let output = shell("tmux capture-pane -t \"\(target)\" -p -S -30 2>/dev/null")
         let allLines = output.components(separatedBy: "\n")
         let lines = allLines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
         guard !lines.isEmpty else { return nil }
 
-        // Look for numbered options pattern: "  1. Some text" or "> 1. Some text"
+        let id = "\(target)-\(Int(Date().timeIntervalSince1970))"
+
+        // === 1. Numbered options: "1. Yes" / "› 1. Yes" ===
+        if let result = detectNumberedOptions(lines: lines, id: id) { return result }
+
+        // === 2. Arrow-key selection: lines with › cursor, no numbers ===
+        if let result = detectArrowSelect(lines: lines, id: id) { return result }
+
+        // === 3. Diff approval: diff markers + approve prompt ===
+        if let result = detectDiffPrompt(lines: lines, id: id) { return result }
+
+        // === 4. Y/N prompt: "(y/n)", "[Y/n]", etc. ===
+        if let result = detectYesNo(lines: lines, id: id) { return result }
+
+        // === 5. Free-text input: question + input indicator ===
+        if let result = detectFreeInput(lines: lines, id: id) { return result }
+
+        return nil
+    }
+
+    // MARK: - Prompt Type Detectors
+
+    private static func detectNumberedOptions(lines: [String], id: String) -> AgentQuestion? {
         var options: [(number: Int, label: String, highlighted: Bool)] = []
         var questionLine: String? = nil
 
         for (i, line) in lines.enumerated() {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-
-            // Match patterns like "› 1. Yes" or "  1. Yes" or "> 1. Yes"
-            // The › character indicates the currently highlighted option
             let isHighlighted = trimmed.hasPrefix("›") || trimmed.hasPrefix(">")
             let cleaned = trimmed
                 .replacingOccurrences(of: "^[›>]\\s*", with: "", options: .regularExpression)
                 .trimmingCharacters(in: .whitespaces)
 
-            // Match "N. text" or "N) text"
-            if let match = cleaned.range(of: #"^(\d+)[.\)]\s+(.+)"#, options: .regularExpression) {
-                let numStr = String(cleaned[cleaned.startIndex..<cleaned.index(cleaned.startIndex, offsetBy: 1)])
-                if let num = Int(numStr) {
-                    let labelStart = cleaned.index(after: cleaned.firstIndex(of: " ")!)
-                    let label = String(cleaned[labelStart...]).trimmingCharacters(in: .whitespaces)
+            if cleaned.range(of: #"^(\d+)[.\)]\s+(.+)"#, options: .regularExpression) != nil {
+                let numStr = String(cleaned.prefix(while: { $0.isNumber }))
+                if let num = Int(numStr), let spaceIdx = cleaned.firstIndex(of: " ") {
+                    let label = String(cleaned[cleaned.index(after: spaceIdx)...]).trimmingCharacters(in: .whitespaces)
                     options.append((number: num, label: label, highlighted: isHighlighted))
 
-                    // The question is usually 1-2 lines before the first option
                     if options.count == 1 && i > 0 {
-                        // Look backwards for the question text
                         for j in stride(from: i - 1, through: max(0, i - 3), by: -1) {
                             let q = lines[j].trimmingCharacters(in: .whitespaces)
                             if !q.isEmpty && q.range(of: #"^\d+[.\)]"#, options: .regularExpression) == nil {
@@ -78,43 +93,176 @@ enum TMuxBridge {
             }
         }
 
-        // If we found numbered options, return them
-        if !options.isEmpty {
-            let question = questionLine ?? "Choose an option"
-            let agentOptions = options.map { opt in
-                AgentQuestion.QuestionOption(
-                    id: opt.number,
-                    label: opt.label,
-                    isHighlighted: opt.highlighted
-                )
+        guard !options.isEmpty else { return nil }
+        return AgentQuestion(
+            id: id,
+            question: questionLine ?? "Choose an option",
+            options: options.map { .init(id: $0.number, label: $0.label, sendKey: "\($0.number)", isHighlighted: $0.highlighted) },
+            promptType: .numbered,
+            detectedAt: Date()
+        )
+    }
+
+    private static func detectArrowSelect(lines: [String], id: String) -> AgentQuestion? {
+        // Look for a block of lines where one has › prefix (cursor) and others are list items
+        var items: [(label: String, highlighted: Bool)] = []
+        var questionLine: String? = nil
+        var inList = false
+
+        for (i, line) in lines.enumerated() {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            let isHighlighted = trimmed.hasPrefix("›") || trimmed.hasPrefix(">")
+
+            if isHighlighted {
+                let label = trimmed
+                    .replacingOccurrences(of: "^[›>]\\s*", with: "", options: .regularExpression)
+                    .trimmingCharacters(in: .whitespaces)
+                if !label.isEmpty && label.count > 1 {
+                    items.append((label: label, highlighted: true))
+                    inList = true
+                    // Find question before the list
+                    if questionLine == nil {
+                        for j in stride(from: i - 1, through: max(0, i - 5), by: -1) {
+                            let q = lines[j].trimmingCharacters(in: .whitespaces)
+                            if !q.isEmpty && !q.hasPrefix("›") && !q.hasPrefix(">") && !q.hasPrefix("  ") {
+                                questionLine = q
+                                break
+                            }
+                        }
+                    }
+                }
+            } else if inList {
+                // Items near the highlighted one are also part of the list
+                let label = trimmed.trimmingCharacters(in: .whitespaces)
+                if !label.isEmpty && label.count > 1 &&
+                   !label.contains("Esc to cancel") && !label.contains("esc to interrupt") {
+                    items.append((label: label, highlighted: false))
+                }
             }
-            return AgentQuestion(
-                id: "\(target)-\(Int(Date().timeIntervalSince1970))",
-                question: question,
-                options: agentOptions,
-                isFreeInput: false,
-                detectedAt: Date()
-            )
         }
 
-        // Check for free-text input prompts (AskUserQuestion, etc.)
-        // Look for patterns like:
-        //   - Lines ending with "?" followed by an input cursor (❯, >, or empty prompt)
-        //   - "Esc to cancel" indicator
-        //   - A question followed by empty input area
+        // Need at least a highlighted item + 1 other to be a real arrow selection
+        guard items.count >= 2, items.contains(where: { $0.highlighted }) else { return nil }
+
+        // For arrow-select, each option sends arrow keys to navigate then Enter
+        let highlightedIdx = items.firstIndex(where: { $0.highlighted }) ?? 0
+        let options = items.enumerated().map { (idx, item) -> AgentQuestion.QuestionOption in
+            // Calculate how many arrow keys needed relative to highlighted position
+            let delta = idx - highlightedIdx
+            var sendKey = ""
+            if delta < 0 {
+                sendKey = String(repeating: "Up ", count: abs(delta)) + "Enter"
+            } else if delta > 0 {
+                sendKey = String(repeating: "Down ", count: delta) + "Enter"
+            } else {
+                sendKey = "Enter"  // already highlighted
+            }
+            return .init(id: idx + 1, label: item.label, sendKey: sendKey, isHighlighted: item.highlighted)
+        }
+
+        return AgentQuestion(
+            id: id,
+            question: questionLine ?? "Select an option",
+            options: options,
+            promptType: .arrowSelect,
+            detectedAt: Date()
+        )
+    }
+
+    private static func detectDiffPrompt(lines: [String], id: String) -> AgentQuestion? {
+        // Look for diff markers (+/-/@@) followed by an approval prompt
+        var hasDiff = false
+        var diffLines: [String] = []
+        var promptLine: String? = nil
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("@@") || trimmed.hasPrefix("+") || trimmed.hasPrefix("-") ||
+               trimmed.hasPrefix("diff --") || trimmed.hasPrefix("index ") {
+                hasDiff = true
+                diffLines.append(line)
+            }
+            // Check for approval patterns after diff
+            if hasDiff {
+                let lower = trimmed.lowercased()
+                if lower.contains("apply") || lower.contains("approve") || lower.contains("accept") ||
+                   lower.contains("reject") || lower.contains("save") ||
+                   (lower.contains("y/n") || lower.contains("[y]") || lower.contains("[n]")) {
+                    promptLine = trimmed
+                }
+            }
+        }
+
+        guard hasDiff, promptLine != nil else { return nil }
+
+        let diffPreview = diffLines.suffix(10).joined(separator: "\n")
+        return AgentQuestion(
+            id: id,
+            question: promptLine ?? "Apply changes?",
+            options: [
+                .init(id: 1, label: "Yes, apply", sendKey: "y", isHighlighted: false),
+                .init(id: 2, label: "No, reject", sendKey: "n", isHighlighted: false),
+            ],
+            promptType: .diff,
+            diffContext: diffPreview,
+            detectedAt: Date()
+        )
+    }
+
+    private static func detectYesNo(lines: [String], id: String) -> AgentQuestion? {
+        let lastLines = lines.suffix(5)
+        for line in lastLines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            let lower = trimmed.lowercased()
+
+            // Match patterns: (y/n), [y/n], [Y/n], (yes/no), y/N, etc.
+            if lower.range(of: #"\(y/?n\)|\[y/?n\]|\(yes/?no\)|\[yes/?no\]|y/n"#, options: .regularExpression) != nil {
+                // Extract the question (everything before the y/n part)
+                let question = trimmed
+                    .replacingOccurrences(of: #"\s*[\(\[](y/?n|yes/?no)[\)\]].*"#, with: "", options: .regularExpression)
+                    .trimmingCharacters(in: .whitespaces)
+
+                return AgentQuestion(
+                    id: id,
+                    question: question.isEmpty ? trimmed : question,
+                    options: [
+                        .init(id: 1, label: "Yes", sendKey: "y", isHighlighted: false),
+                        .init(id: 2, label: "No", sendKey: "n", isHighlighted: false),
+                    ],
+                    promptType: .yesNo,
+                    detectedAt: Date()
+                )
+            }
+
+            // Match: "Continue?" "Retry?" "Proceed?" at end of line
+            if (lower.hasSuffix("continue?") || lower.hasSuffix("retry?") || lower.hasSuffix("proceed?")) {
+                return AgentQuestion(
+                    id: id,
+                    question: trimmed,
+                    options: [
+                        .init(id: 1, label: "Yes", sendKey: "y", isHighlighted: false),
+                        .init(id: 2, label: "No", sendKey: "n", isHighlighted: false),
+                    ],
+                    promptType: .yesNo,
+                    detectedAt: Date()
+                )
+            }
+        }
+        return nil
+    }
+
+    private static func detectFreeInput(lines: [String], id: String) -> AgentQuestion? {
         let lastLines = lines.suffix(8)
         var detectedQuestion: String? = nil
 
         for line in lastLines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-
-            // Detect question lines (ending with ? or ？)
-            if trimmed.hasSuffix("?") || trimmed.hasSuffix("？") || trimmed.hasSuffix("呢") || trimmed.hasSuffix("吗") || trimmed.hasSuffix("嗎") {
+            if trimmed.hasSuffix("?") || trimmed.hasSuffix("？") ||
+               trimmed.hasSuffix("呢") || trimmed.hasSuffix("吗") || trimmed.hasSuffix("嗎") {
                 detectedQuestion = trimmed
             }
         }
 
-        // Check for Claude Code input indicators in the last few lines
         let hasInputIndicator = lastLines.contains { line in
             let t = line.trimmingCharacters(in: .whitespaces)
             return t == "❯" || t == ">" || t == "›" ||
@@ -122,17 +270,15 @@ enum TMuxBridge {
                    t.contains("Tab to amend")
         }
 
-        if let question = detectedQuestion, hasInputIndicator {
-            return AgentQuestion(
-                id: "\(target)-\(Int(Date().timeIntervalSince1970))",
-                question: question,
-                options: [],
-                isFreeInput: true,
-                detectedAt: Date()
-            )
-        }
+        guard let question = detectedQuestion, hasInputIndicator else { return nil }
 
-        return nil
+        return AgentQuestion(
+            id: id,
+            question: question,
+            options: [],
+            promptType: .freeInput,
+            detectedAt: Date()
+        )
     }
 
     // MARK: - Private
