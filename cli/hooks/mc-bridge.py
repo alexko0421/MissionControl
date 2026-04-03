@@ -148,14 +148,17 @@ def cmd_question(args):
         "request_id": args.request_id, "question": args.question,
         "options": options,
     }
-    result = send_and_receive(message, wait_for_response=True)
-    if result is None: result = {"decision": "approve"}
-    # Output decision — Claude Code reads this to skip its own prompt
-    # Try both formats to see which Claude Code recognizes
-    if result.get("decision") == "approve":
-        print(json.dumps({"approve": True}))
-    else:
-        print(json.dumps({"decision": "block", "reason": "User denied in MissionControl"}))
+    # Include tmux info if available
+    if getattr(args, "tmux_session", None):
+        message["tmux_session"] = args.tmux_session
+    if getattr(args, "tmux_window", None) is not None:
+        message["tmux_window"] = args.tmux_window
+    if getattr(args, "tmux_pane", None) is not None:
+        message["tmux_pane"] = args.tmux_pane
+
+    # Fire-and-forget: send question to MissionControl, don't wait
+    # Claude Code shows its own prompt immediately
+    send_and_receive(message, wait_for_response=False)
 
 
 def main():
@@ -181,6 +184,7 @@ def main():
     sp = subparsers.add_parser("question")
     sp.add_argument("--agent-id", required=True); sp.add_argument("--request-id", required=True)
     sp.add_argument("--question", required=True); sp.add_argument("--options", default="[]")
+    sp.add_argument("--tmux-session"); sp.add_argument("--tmux-window", type=int); sp.add_argument("--tmux-pane", type=int)
 
     args = parser.parse_args()
     if args.command == "status": cmd_status(args)
