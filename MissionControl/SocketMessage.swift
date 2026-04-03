@@ -6,6 +6,7 @@ enum IncomingMessageType: String, Codable {
     case statusUpdate = "status_update"
     case permissionRequest = "permission_request"
     case planReview = "plan_review"
+    case question = "question"
 }
 
 struct IncomingMessage: Codable {
@@ -30,6 +31,10 @@ struct IncomingMessage: Codable {
 
     var markdown: String?
 
+    // question fields
+    var question: String?
+    var options: [[String: String]]?  // [{id, label, sendKey}]
+
     enum CodingKeys: String, CodingKey {
         case type
         case agentId = "agent_id"
@@ -44,6 +49,7 @@ struct IncomingMessage: Codable {
         case tool
         case toolInput = "tool_input"
         case markdown
+        case question, options
     }
 }
 

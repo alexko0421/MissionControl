@@ -83,6 +83,9 @@ class AgentStore: ObservableObject {
         socketServer.onPlanReview = { [weak self] msg, clientFD in
             self?.handlePlanReview(msg, clientFD: clientFD)
         }
+        socketServer.onQuestion = { [weak self] msg, clientFD in
+            self?.handleQuestion(msg, clientFD: clientFD)
+        }
         socketServer.startListening()
     }
 
@@ -339,6 +342,45 @@ class AgentStore: ObservableObject {
         }
     }
 
+    private func handleQuestion(_ msg: IncomingMessage, clientFD: Int32) {
+        guard let agentId = msg.agentId,
+              let requestId = msg.requestId,
+              let questionText = msg.question else { return }
+
+        pendingClientFDs[requestId] = clientFD
+
+        // Build options from message
+        var questionOptions: [AgentQuestion.QuestionOption] = []
+        if let opts = msg.options {
+            for (i, opt) in opts.enumerated() {
+                questionOptions.append(.init(
+                    id: Int(opt["id"] ?? "\(i+1)") ?? (i+1),
+                    label: opt["label"] ?? "Option \(i+1)",
+                    sendKey: opt["sendKey"] ?? "\(i+1)",
+                    isHighlighted: i == 0
+                ))
+            }
+        }
+
+        let agentQuestion = AgentQuestion(
+            id: requestId,
+            question: questionText,
+            options: questionOptions,
+            promptType: questionOptions.isEmpty ? .freeInput : .numbered,
+            detectedAt: Date()
+        )
+
+        if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                agents[idx].pendingQuestion = agentQuestion
+                agents[idx].status = .blocked
+                agents[idx].updatedAt = Date()
+            }
+            triggerAlert(for: agents[idx])
+            autoSwitchTab()
+        }
+    }
+
     private func triggerAlert(for agent: Agent) {
         let now = Date()
         // Debounce: skip if alerted within last 5 seconds
@@ -433,10 +475,14 @@ class AgentStore: ObservableObject {
 
     func respondQuestion(agentId: String, option: AgentQuestion.QuestionOption) {
         if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            let questionId = agents[idx].pendingQuestion?.id ?? ""
+            // Send socket response (for hook-based questions)
+            let decision = option.sendKey == "3" || option.sendKey == "n" ? "deny" : "approve"
+            sendDecision(requestId: questionId, type: "question_response", decision: decision)
+            // Send tmux keys (for tmux-based sessions)
             if let target = agents[idx].tmuxTarget {
                 let sendKey = option.sendKey
                 Task.detached {
-                    // Arrow-select: may need multiple keys (e.g. "Down Down Enter")
                     let parts = sendKey.components(separatedBy: " ")
                     for part in parts {
                         TMuxBridge.sendKeys(target: target, command: part)
@@ -457,6 +503,8 @@ class AgentStore: ObservableObject {
 
     func respondFreeText(agentId: String, text: String) {
         if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            let questionId = agents[idx].pendingQuestion?.id ?? ""
+            sendDecision(requestId: questionId, type: "question_response", decision: "approve")
             if let target = agents[idx].tmuxTarget {
                 Task.detached { TMuxBridge.sendKeys(target: target, command: text) }
             }

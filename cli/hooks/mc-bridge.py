@@ -135,6 +135,24 @@ def cmd_plan(args):
         print(json.dumps({"decision": "block", "reason": "User rejected plan in MissionControl"}))
 
 
+def cmd_question(args):
+    options = []
+    if args.options:
+        try: options = json.loads(args.options)
+        except json.JSONDecodeError: pass
+
+    message = {
+        "type": "question", "agent_id": args.agent_id,
+        "request_id": args.request_id, "question": args.question,
+        "options": options,
+    }
+    result = send_and_receive(message, wait_for_response=True)
+    if result is None: result = {"decision": "approve"}
+    # Output the decision for the hook to read
+    if result.get("decision") == "deny":
+        print(json.dumps({"decision": "block", "reason": "User denied in MissionControl"}))
+
+
 def main():
     parser = argparse.ArgumentParser(description="MissionControl bridge")
     subparsers = parser.add_subparsers(dest="command")
@@ -155,10 +173,15 @@ def main():
     sp.add_argument("--agent-id", required=True); sp.add_argument("--request-id", required=True)
     sp.add_argument("--markdown", required=True)
 
+    sp = subparsers.add_parser("question")
+    sp.add_argument("--agent-id", required=True); sp.add_argument("--request-id", required=True)
+    sp.add_argument("--question", required=True); sp.add_argument("--options", default="[]")
+
     args = parser.parse_args()
     if args.command == "status": cmd_status(args)
     elif args.command == "permission": cmd_permission(args)
     elif args.command == "plan": cmd_plan(args)
+    elif args.command == "question": cmd_question(args)
     else: parser.print_help()
 
 
