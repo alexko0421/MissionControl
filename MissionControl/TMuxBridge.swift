@@ -67,7 +67,17 @@ enum TMuxBridge {
         var options: [(number: Int, label: String, highlighted: Bool)] = []
         var questionLine: String? = nil
 
-        for (i, line) in lines.enumerated() {
+        // Filter out shell prompt lines and command echo lines
+        let filteredLines = lines.filter { line in
+            let t = line.trimmingCharacters(in: .whitespaces)
+            // Skip shell prompts (user@host ... %)
+            if t.contains("% ") && t.contains("@") { return false }
+            // Skip lines that look like command echoes (contain printf, echo, etc.)
+            if t.contains("printf ") || t.contains("echo ") { return false }
+            return true
+        }
+
+        for (i, line) in filteredLines.enumerated() {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             let isHighlighted = trimmed.hasPrefix("›") || trimmed.hasPrefix(">")
             let cleaned = trimmed
@@ -78,11 +88,14 @@ enum TMuxBridge {
                 let numStr = String(cleaned.prefix(while: { $0.isNumber }))
                 if let num = Int(numStr), let spaceIdx = cleaned.firstIndex(of: " ") {
                     let label = String(cleaned[cleaned.index(after: spaceIdx)...]).trimmingCharacters(in: .whitespaces)
-                    options.append((number: num, label: label, highlighted: isHighlighted))
+                    // Deduplicate: skip if same number+label already exists
+                    if !options.contains(where: { $0.number == num && $0.label == label }) {
+                        options.append((number: num, label: label, highlighted: isHighlighted))
+                    }
 
-                    if options.count == 1 && i > 0 {
+                    if options.count == 1 && questionLine == nil && i > 0 {
                         for j in stride(from: i - 1, through: max(0, i - 3), by: -1) {
-                            let q = lines[j].trimmingCharacters(in: .whitespaces)
+                            let q = filteredLines[j].trimmingCharacters(in: .whitespaces)
                             if !q.isEmpty && q.range(of: #"^\d+[.\)]"#, options: .regularExpression) == nil {
                                 questionLine = q
                                 break
