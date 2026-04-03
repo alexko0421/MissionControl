@@ -86,6 +86,19 @@ class AgentStore: ObservableObject {
         socketServer.onQuestion = { [weak self] msg, clientFD in
             self?.handleQuestion(msg, clientFD: clientFD)
         }
+        socketServer.onQuestionResolved = { [weak self] msg in
+            guard let self = self, let agentId = msg.agentId else { return }
+            if let idx = self.agents.firstIndex(where: { $0.id == agentId }) {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    self.agents[idx].pendingQuestion = nil
+                    if self.agents[idx].status == .blocked {
+                        self.agents[idx].status = .running
+                    }
+                    self.agents[idx].updatedAt = Date()
+                }
+                self.collapseIfNoPending()
+            }
+        }
         socketServer.startListening()
     }
 

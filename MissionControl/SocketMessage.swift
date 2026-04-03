@@ -7,6 +7,7 @@ enum IncomingMessageType: String, Codable {
     case permissionRequest = "permission_request"
     case planReview = "plan_review"
     case question = "question"
+    case questionResolved = "question_resolved"
 }
 
 struct IncomingMessage: Codable {

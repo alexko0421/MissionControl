@@ -161,6 +161,14 @@ def cmd_question(args):
     send_and_receive(message, wait_for_response=False)
 
 
+def cmd_question_resolved(args):
+    message = {
+        "type": "question_resolved",
+        "agent_id": args.agent_id,
+    }
+    send_and_receive(message, wait_for_response=False)
+
+
 def main():
     parser = argparse.ArgumentParser(description="MissionControl bridge")
     subparsers = parser.add_subparsers(dest="command")
@@ -186,11 +194,15 @@ def main():
     sp.add_argument("--question", required=True); sp.add_argument("--options", default="[]")
     sp.add_argument("--tmux-session"); sp.add_argument("--tmux-window", type=int); sp.add_argument("--tmux-pane", type=int)
 
+    sp = subparsers.add_parser("question-resolved")
+    sp.add_argument("--agent-id", required=True)
+
     args = parser.parse_args()
     if args.command == "status": cmd_status(args)
     elif args.command == "permission": cmd_permission(args)
     elif args.command == "plan": cmd_plan(args)
     elif args.command == "question": cmd_question(args)
+    elif args.command == "question-resolved": cmd_question_resolved(args)
     else: parser.print_help()
 
 

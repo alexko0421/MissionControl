@@ -12,6 +12,7 @@ class MCSocketServer {
     var onPermissionRequest: ((IncomingMessage, Int32) -> Void)?
     var onPlanReview: ((IncomingMessage, Int32) -> Void)?
     var onQuestion: ((IncomingMessage, Int32) -> Void)?
+    var onQuestionResolved: ((IncomingMessage) -> Void)?
 
     struct ClientConnection {
         let fd: Int32
@@ -194,6 +195,8 @@ class MCSocketServer {
             onPlanReview?(msg, fd)
         case .question:
             onQuestion?(msg, fd)
+        case .questionResolved:
+            onQuestionResolved?(msg)
         }
     }
 }

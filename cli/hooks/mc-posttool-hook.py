@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Claude Code PostToolUse hook — marks agent back to 'running' via mc-bridge."""
+"""Claude Code PostToolUse hook — clears pending question and marks agent running."""
 
 import json, os, sys, hashlib, subprocess
 
@@ -16,6 +16,12 @@ def main():
     if not cwd: return
 
     agent_id = hashlib.md5(cwd.encode()).hexdigest()[:8]
+
+    # Clear pending question
+    subprocess.run([sys.executable, BRIDGE, "question-resolved",
+        "--agent-id", agent_id], timeout=5, capture_output=True)
+
+    # Update status to running
     subprocess.run([sys.executable, BRIDGE, "status",
         "--agent-id", agent_id, "--status", "running"], timeout=5, capture_output=True)
 
