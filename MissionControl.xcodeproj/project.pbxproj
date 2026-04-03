@@ -17,11 +17,10 @@
 		68235A75600D0FCDDB595175 /* QuestionCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A352BA37C23B210451A4F758 /* QuestionCardView.swift */; };
 		A16E9FAF43F02498FBF4D2B8 /* MCSocketServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA974632EE036081251304E5 /* MCSocketServer.swift */; };
 		A349860985E8BC70B35E64A0 /* PlanReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBE9CF740A802A63C68A123B /* PlanReviewView.swift */; };
+		F1A2B3C4D5E6F7A8B9C0D1E2 /* PermissionCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* PermissionCardView.swift */; };
 		BEF901D6CA7FDC079E558640 /* FloatingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C3584F32DE0F76E15442837 /* FloatingPanel.swift */; };
 		C4743423AE7822B8D064106B /* TMuxBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D35A893FADD2B3ECFCBC0F9 /* TMuxBridge.swift */; };
 		C8C4E552AC4084FF1B41E072 /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD80219C23C6E929034D3869 /* SharedComponents.swift */; };
-		E9F8D7C6B5A493827160CAFE /* NotificationPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1B3C4D5E6F78901234ABCD /* NotificationPanel.swift */; };
-		FD2222395362032247798458 /* PermissionCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634F82122A97869B40E7821A /* PermissionCardView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,14 +30,13 @@
 		4BF55F93FA2531E7F621514C /* MissionControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MissionControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C3584F32DE0F76E15442837 /* FloatingPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPanel.swift; sourceTree = "<group>"; };
 		5CD92BF1CC6D897039953331 /* AgentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentStore.swift; sourceTree = "<group>"; };
-		634F82122A97869B40E7821A /* PermissionCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionCardView.swift; sourceTree = "<group>"; };
-		7A1B3C4D5E6F78901234ABCD /* NotificationPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPanel.swift; sourceTree = "<group>"; };
 		6D35A893FADD2B3ECFCBC0F9 /* TMuxBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMuxBridge.swift; sourceTree = "<group>"; };
 		8F3A0C88E4BC3F8B5E50F748 /* MissionControlApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissionControlApp.swift; sourceTree = "<group>"; };
 		90B28051075A78C99DBF5BE6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		A352BA37C23B210451A4F758 /* QuestionCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionCardView.swift; sourceTree = "<group>"; };
 		BA974632EE036081251304E5 /* MCSocketServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCSocketServer.swift; sourceTree = "<group>"; };
 		CB5DA73C418961FC7B25AE84 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* PermissionCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionCardView.swift; sourceTree = "<group>"; };
 		CBE9CF740A802A63C68A123B /* PlanReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanReviewView.swift; sourceTree = "<group>"; };
 		CD80219C23C6E929034D3869 /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
 		DA4443C620C5229203586BB1 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -64,8 +62,7 @@
 				BA974632EE036081251304E5 /* MCSocketServer.swift */,
 				8F3A0C88E4BC3F8B5E50F748 /* MissionControlApp.swift */,
 				45103C04701C5A509D84DB0C /* Models.swift */,
-				7A1B3C4D5E6F78901234ABCD /* NotificationPanel.swift */,
-				634F82122A97869B40E7821A /* PermissionCardView.swift */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* PermissionCardView.swift */,
 				CBE9CF740A802A63C68A123B /* PlanReviewView.swift */,
 				A352BA37C23B210451A4F758 /* QuestionCardView.swift */,
 				DA4443C620C5229203586BB1 /* SettingsView.swift */,
@@ -157,8 +154,7 @@
 				A16E9FAF43F02498FBF4D2B8 /* MCSocketServer.swift in Sources */,
 				5330C852D09BB43E679EA616 /* MissionControlApp.swift in Sources */,
 				3FE08E3257F665D905CF0150 /* Models.swift in Sources */,
-				E9F8D7C6B5A493827160CAFE /* NotificationPanel.swift in Sources */,
-				FD2222395362032247798458 /* PermissionCardView.swift in Sources */,
+				F1A2B3C4D5E6F7A8B9C0D1E2 /* PermissionCardView.swift in Sources */,
 				A349860985E8BC70B35E64A0 /* PlanReviewView.swift in Sources */,
 				68235A75600D0FCDDB595175 /* QuestionCardView.swift in Sources */,
 				0345BF2ECC960D6BE0288CED /* SettingsView.swift in Sources */,
