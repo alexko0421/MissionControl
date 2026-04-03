@@ -107,7 +107,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         if let agent = store.agents.first(where: { $0.pendingPermission != nil }),
            let perm = agent.pendingPermission {
-            store.respondPermission(agentId: agent.id, requestId: perm.id, choice: .yes)
+            store.respondPermission(agentId: agent.id, requestId: perm.id, choice: .allowOnce)
         }
     }
 
@@ -123,7 +123,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         if let agent = store.agents.first(where: { $0.pendingPermission != nil }),
            let perm = agent.pendingPermission {
-            store.respondPermission(agentId: agent.id, requestId: perm.id, choice: .no)
+            store.respondPermission(agentId: agent.id, requestId: perm.id, choice: .deny)
         }
     }
 

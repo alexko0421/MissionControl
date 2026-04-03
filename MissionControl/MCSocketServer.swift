@@ -175,8 +175,24 @@ class MCSocketServer {
             let lineData = buffer[buffer.startIndex..<newlineIndex]
             clientConnections[fd]!.buffer = Data(buffer[(newlineIndex + 1)...])
 
+            // Pre-process: convert tool_input values to strings (handles int/bool/etc.)
+            let processedData: Data
+            if var jsonObj = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any] {
+                if let toolInput = jsonObj["tool_input"] as? [String: Any] {
+                    var stringified: [String: String] = [:]
+                    for (k, v) in toolInput {
+                        if let s = v as? String { stringified[k] = s }
+                        else { stringified[k] = "\(v)" }
+                    }
+                    jsonObj["tool_input"] = stringified
+                }
+                processedData = (try? JSONSerialization.data(withJSONObject: jsonObj)) ?? Data(lineData)
+            } else {
+                processedData = Data(lineData)
+            }
+
             let decoder = JSONDecoder()
-            if let msg = try? decoder.decode(IncomingMessage.self, from: lineData) {
+            if let msg = try? decoder.decode(IncomingMessage.self, from: processedData) {
                 handleMessage(msg, from: fd)
             } else {
                 let raw = String(data: lineData, encoding: .utf8) ?? "<non-utf8>"

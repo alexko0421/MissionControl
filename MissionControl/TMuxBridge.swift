@@ -22,7 +22,23 @@ enum TMuxBridge {
     // Send a command string to a tmux pane
     static func sendKeys(target: String, command: String) {
         let escaped = command.replacingOccurrences(of: "\"", with: "\\\"")
-        _ = shell("/opt/homebrew/bin/tmux send-keys -t \"\(target)\" \"\(escaped)\" Enter 2>/dev/null")
+        let cmd = "/opt/homebrew/bin/tmux send-keys -t \"\(target)\" \"\(escaped)\" Enter"
+        let process = Process()
+        let outPipe = Pipe()
+        let errPipe = Pipe()
+        process.standardOutput = outPipe
+        process.standardError = errPipe
+        process.arguments = ["-l", "-c", cmd]
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        do {
+            try process.run()
+            process.waitUntilExit()
+            let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
+            let errStr = String(data: errData, encoding: .utf8) ?? ""
+            print("[MC-DEBUG] sendKeys(\(target), \(command)): exit=\(process.terminationStatus), err=\(errStr)")
+        } catch {
+            print("[MC-DEBUG] sendKeys FAILED to launch: \(error)")
+        }
     }
 
     // List active tmux sessions

@@ -372,10 +372,12 @@ class AgentStore: ObservableObject {
 
         if let idx = agents.firstIndex(where: { $0.id == agentId }) {
             // Store tmux info from question message if available
+            print("[MC-DEBUG] handleQuestion: agentId=\(agentId), tmuxSession=\(msg.tmuxSession ?? "nil"), tmuxWindow=\(msg.tmuxWindow ?? -1), tmuxPane=\(msg.tmuxPane ?? -1)")
             if let session = msg.tmuxSession {
                 agents[idx].tmuxSession = session
                 agents[idx].tmuxWindow = msg.tmuxWindow
                 agents[idx].tmuxPane = msg.tmuxPane
+                print("[MC-DEBUG] Stored tmux info: \(session):\(msg.tmuxWindow ?? 0).\(msg.tmuxPane ?? 0)")
             }
             withAnimation(.easeInOut(duration: 0.2)) {
                 agents[idx].pendingQuestion = agentQuestion
@@ -399,34 +401,33 @@ class AgentStore: ObservableObject {
             return
         }
         lastAlertTimes[agent.id] = now
-        activeAlert = AgentAlert(
+        let alert = AgentAlert(
             agentId: agent.id,
             agentName: agent.name,
             newStatus: agent.status,
             task: agent.task
         )
+        activeAlert = alert
         NSSound(named: "Ping")?.play()
+
+        // Show popup notification only when task is done
+        if agent.status == .done {
+            NotificationPanel.shared.show(alert: alert)
+        }
     }
 
     // MARK: - Permission Choice
 
     enum PermissionChoice {
-        case yes            // Send "1" → Yes
-        case yesDontAskAgain // Send "2" → Yes, don't ask again
-        case no             // Send "3" → No
-
-        var tmuxKey: String {
-            switch self {
-            case .yes: return "1"
-            case .yesDontAskAgain: return "2"
-            case .no: return "3"
-            }
-        }
+        case deny
+        case allowOnce
+        case alwaysAllow
+        case bypass
 
         var isApproval: Bool {
             switch self {
-            case .yes, .yesDontAskAgain: return true
-            case .no: return false
+            case .allowOnce, .alwaysAllow, .bypass: return true
+            case .deny: return false
             }
         }
     }
@@ -435,12 +436,11 @@ class AgentStore: ObservableObject {
 
     func respondPermission(agentId: String, requestId: String, choice: PermissionChoice) {
         let decision = choice.isApproval ? "approve" : "deny"
+        // Send decision back via socket — the PermissionRequest hook is blocking
+        // and will receive this response, then output JSON to Claude Code directly.
+        // No tmux send-keys needed.
         sendDecision(requestId: requestId, type: "permission_response", decision: decision)
         if let idx = agents.firstIndex(where: { $0.id == agentId }) {
-            if let target = agents[idx].tmuxTarget {
-                let key = choice.tmuxKey
-                Task.detached { TMuxBridge.sendKeys(target: target, command: key) }
-            }
             withAnimation(.easeInOut(duration: 0.2)) {
                 agents[idx].pendingPermission = nil
                 agents[idx].status = choice.isApproval ? .running : agents[idx].status
@@ -486,8 +486,11 @@ class AgentStore: ObservableObject {
             sendDecision(requestId: questionId, type: "question_response", decision: decision)
 
             let sendKey = option.sendKey
-            if let target = agents[idx].tmuxTarget {
-                // tmux session: send keys directly
+            // Try tmux first (from agent info), then fallback to finding any active tmux session
+            let target = agents[idx].tmuxTarget ?? Self.findActiveTmuxTarget()
+            print("[MC-DEBUG] respondQuestion: agentId=\(agentId), sendKey=\(sendKey), target=\(target ?? "nil")")
+            if let target = target {
+                print("[MC-DEBUG] Sending via tmux: \(sendKey) -> \(target)")
                 Task.detached {
                     let parts = sendKey.components(separatedBy: " ")
                     for part in parts {
@@ -496,9 +499,9 @@ class AgentStore: ObservableObject {
                     }
                 }
             } else {
-                // Non-tmux: use AppleScript to type into Terminal
-                // Need to wait for hook to exit + Claude Code to render prompt
+                // No tmux available, try AppleScript as last resort
                 let appName = agents[idx].app ?? "Terminal"
+                print("[MC-DEBUG] No tmux, falling back to AppleScript for: \(appName)")
                 Task.detached {
                     Thread.sleep(forTimeInterval: 2.0)
                     Self.typeInTerminal(text: sendKey, appName: appName)
@@ -512,6 +515,34 @@ class AgentStore: ObservableObject {
             }
         }
         collapseIfNoPending()
+    }
+
+    /// Find any active tmux pane as fallback when agent doesn't have tmux info
+    nonisolated static func findActiveTmuxTarget() -> String? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/opt/homebrew/bin/tmux")
+        process.arguments = ["list-panes", "-aF", "#{session_name}:#{window_index}.#{pane_index} #{pane_active}"]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+            process.waitUntilExit()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let output = String(data: data, encoding: .utf8) {
+                // Find the first active pane
+                for line in output.components(separatedBy: "\n") {
+                    let parts = line.trimmingCharacters(in: .whitespaces).components(separatedBy: " ")
+                    if parts.count >= 2 && parts[1] == "1" {
+                        print("[MC-DEBUG] Found active tmux pane: \(parts[0])")
+                        return parts[0]
+                    }
+                }
+            }
+        } catch {
+            print("[MC-DEBUG] tmux list-panes failed: \(error)")
+        }
+        return nil
     }
 
     /// Type text into a terminal app using NSAppleScript (runs in-process, uses MissionControl's accessibility permissions)

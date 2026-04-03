@@ -10,7 +10,6 @@ struct ContentView: View {
                 .zIndex(2)
 
             // Expanded content (session list or summary) container
-            // We use ZStack or just VStack to manage the emerging views so they render below CapsuleBar
             VStack(spacing: 0) {
                 if case .sessionList = store.viewState {
                     SessionListPanel()
@@ -421,7 +420,6 @@ struct SessionListPanel: View {
                         Text(agent.name)
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.8))
-                        AgentBadge(label: agent.agentTypeLabel)
                         Spacer()
                     }
                     .padding(.horizontal, 14)
@@ -477,8 +475,6 @@ struct SessionListPanel: View {
                                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                                     .foregroundStyle(.white.opacity(0.9))
                                     .lineLimit(1)
-                                AgentBadge(label: agent.agentTypeLabel)
-                                AgentBadge(label: agent.displayApp)
                             }
                             if agent.status == .done {
                                 Text(isEn ? "Done — click to jump" : "已完成 — 点击跳转")
@@ -522,10 +518,6 @@ struct SessionRow: View {
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundStyle(.white.opacity(isHovered ? 1.0 : 0.95))
                             .lineLimit(1)
-
-                        // Agent type + terminal badges
-                        AgentBadge(label: agent.agentTypeLabel)
-                        AgentBadge(label: agent.displayApp)
                     }
 
                     Text(agent.task)

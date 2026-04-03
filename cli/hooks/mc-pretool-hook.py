@@ -11,14 +11,16 @@ BRIDGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mc-bridge.py"
 
 def get_tmux_info():
     """Return (session, window, pane) if running inside tmux, else (None, None, None)."""
-    if not os.environ.get("TMUX"):
-        return None, None, None
     tmux = shutil.which("tmux") or "/opt/homebrew/bin/tmux"
     try:
+        # Don't check $TMUX env var — it may not be passed to hook subprocesses
+        # Just try calling tmux directly; it fails fast if not in tmux
         result = subprocess.run(
             [tmux, "display-message", "-p", "#{session_name}:#{window_index}.#{pane_index}"],
-            capture_output=True, text=True, timeout=5
+            capture_output=True, text=True, timeout=2
         )
+        if result.returncode != 0:
+            return None, None, None
         parts = result.stdout.strip().replace(":", " ").replace(".", " ").split()
         if len(parts) == 3:
             return parts[0], int(parts[1]), int(parts[2])
