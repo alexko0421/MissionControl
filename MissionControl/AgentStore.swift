@@ -476,22 +476,29 @@ class AgentStore: ObservableObject {
     func respondQuestion(agentId: String, option: AgentQuestion.QuestionOption) {
         if let idx = agents.firstIndex(where: { $0.id == agentId }) {
             let questionId = agents[idx].pendingQuestion?.id ?? ""
-            // Send socket response (for hook-based questions)
             let decision = option.sendKey == "3" || option.sendKey == "n" ? "deny" : "approve"
             sendDecision(requestId: questionId, type: "question_response", decision: decision)
-            // Send tmux keys (for tmux-based sessions)
+
+            let sendKey = option.sendKey
             if let target = agents[idx].tmuxTarget {
-                let sendKey = option.sendKey
+                // tmux session: send keys directly
                 Task.detached {
                     let parts = sendKey.components(separatedBy: " ")
                     for part in parts {
                         TMuxBridge.sendKeys(target: target, command: part)
-                        if parts.count > 1 {
-                            Thread.sleep(forTimeInterval: 0.1)
-                        }
+                        if parts.count > 1 { Thread.sleep(forTimeInterval: 0.1) }
                     }
                 }
+            } else {
+                // Non-tmux: use AppleScript to type into Terminal after a short delay
+                // (wait for Claude Code to show its prompt after hook exits)
+                let appName = agents[idx].app ?? "Terminal"
+                Task.detached {
+                    Thread.sleep(forTimeInterval: 0.5)
+                    Self.typeInTerminal(text: sendKey, appName: appName)
+                }
             }
+
             withAnimation(.easeInOut(duration: 0.2)) {
                 agents[idx].pendingQuestion = nil
                 agents[idx].status = .running
@@ -499,6 +506,28 @@ class AgentStore: ObservableObject {
             }
         }
         collapseIfNoPending()
+    }
+
+    /// Type text into a terminal app using AppleScript keystroke injection
+    nonisolated static func typeInTerminal(text: String, appName: String) {
+        let escaped = text.replacingOccurrences(of: "\"", with: "\\\"")
+        let script = """
+        tell application "\(appName)"
+            activate
+            delay 0.3
+            tell application "System Events"
+                keystroke "\(escaped)"
+                keystroke return
+            end tell
+        end tell
+        """
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-e", script]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try? process.run()
+        process.waitUntilExit()
     }
 
     func respondFreeText(agentId: String, text: String) {
