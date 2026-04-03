@@ -78,7 +78,7 @@ class AgentStore: ObservableObject {
             self?.handleStatusUpdate(msg)
         }
         socketServer.onPermissionRequest = { [weak self] msg, clientFD in
-            self?.handlePermissionRequest(msg, clientFD: clientFD)
+            self?.handlePermissionRequest(msg)
         }
         socketServer.onPlanReview = { [weak self] msg, clientFD in
             self?.handlePlanReview(msg, clientFD: clientFD)
@@ -89,6 +89,7 @@ class AgentStore: ObservableObject {
         socketServer.onQuestionResolved = { [weak self] msg in
             guard let self = self, let agentId = msg.agentId else { return }
             if let idx = self.agents.firstIndex(where: { $0.id == agentId }) {
+                self.agents[idx].pendingPermission = nil
                 withAnimation(.easeInOut(duration: 0.2)) {
                     self.agents[idx].pendingQuestion = nil
                     if self.agents[idx].status == .blocked {
@@ -292,7 +293,7 @@ class AgentStore: ObservableObject {
         }
     }
 
-    private func handlePermissionRequest(_ msg: IncomingMessage, clientFD: Int32) {
+    private func handlePermissionRequest(_ msg: IncomingMessage) {
         guard let agentId = msg.agentId,
               let requestId = msg.requestId,
               let tool = msg.tool else { return }
@@ -304,18 +305,58 @@ class AgentStore: ObservableObject {
             receivedAt: Date()
         )
 
-        pendingClientFDs[requestId] = clientFD
-
         if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            if let session = msg.tmuxSession {
+                agents[idx].tmuxSession = session
+                agents[idx].tmuxWindow = msg.tmuxWindow
+                agents[idx].tmuxPane = msg.tmuxPane
+            }
             withAnimation(.easeInOut(duration: 0.2)) {
                 agents[idx].pendingPermission = request
                 agents[idx].status = .blocked
                 agents[idx].updatedAt = Date()
             }
             triggerAlert(for: agents[idx])
-            // Auto-switch to Approve tab
+            autoSwitchTab()
+        } else {
+            var agent = Agent(
+                id: agentId,
+                name: msg.name ?? agentId,
+                status: .blocked,
+                task: "\(tool) approval",
+                summary: "",
+                terminalLines: [],
+                nextAction: "",
+                updatedAt: Date(),
+                tmuxSession: msg.tmuxSession,
+                tmuxWindow: msg.tmuxWindow,
+                tmuxPane: msg.tmuxPane
+            )
+            agent.pendingPermission = request
+            withAnimation(.easeInOut(duration: 0.2)) {
+                agents.append(agent)
+            }
+            triggerAlert(for: agent)
             autoSwitchTab()
         }
+    }
+
+    func respondPermission(agentId: String, allow: Bool) {
+        guard let idx = agents.firstIndex(where: { $0.id == agentId }) else { return }
+        let sendKey = allow ? "y" : "n"
+
+        if let target = agents[idx].tmuxTarget {
+            Task.detached {
+                TMuxBridge.sendKeys(target: target, command: sendKey)
+            }
+        }
+
+        withAnimation(.easeInOut(duration: 0.2)) {
+            agents[idx].pendingPermission = nil
+            agents[idx].status = allow ? .running : agents[idx].status
+            agents[idx].updatedAt = Date()
+        }
+        collapseIfNoPending()
     }
 
     private func handlePlanReview(_ msg: IncomingMessage, clientFD: Int32) {
@@ -409,46 +450,9 @@ class AgentStore: ObservableObject {
         )
         activeAlert = alert
         NSSound(named: "Ping")?.play()
-
-        // Show popup notification only when task is done
-        if agent.status == .done {
-            NotificationPanel.shared.show(alert: alert)
-        }
-    }
-
-    // MARK: - Permission Choice
-
-    enum PermissionChoice {
-        case deny
-        case allowOnce
-        case alwaysAllow
-        case bypass
-
-        var isApproval: Bool {
-            switch self {
-            case .allowOnce, .alwaysAllow, .bypass: return true
-            case .deny: return false
-            }
-        }
     }
 
     // MARK: - Approve / Deny Actions
-
-    func respondPermission(agentId: String, requestId: String, choice: PermissionChoice) {
-        let decision = choice.isApproval ? "approve" : "deny"
-        // Send decision back via socket — the PermissionRequest hook is blocking
-        // and will receive this response, then output JSON to Claude Code directly.
-        // No tmux send-keys needed.
-        sendDecision(requestId: requestId, type: "permission_response", decision: decision)
-        if let idx = agents.firstIndex(where: { $0.id == agentId }) {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                agents[idx].pendingPermission = nil
-                agents[idx].status = choice.isApproval ? .running : agents[idx].status
-                agents[idx].updatedAt = Date()
-            }
-        }
-        collapseIfNoPending()
-    }
 
     func approvePlan(agentId: String, requestId: String) {
         sendDecision(requestId: requestId, type: "plan_response", decision: "approve")
