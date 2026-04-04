@@ -1,6 +1,7 @@
 import AppKit
 
 class NotchPanel: NSPanel {
+
     init() {
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 10, height: 10),
@@ -8,33 +9,39 @@ class NotchPanel: NSPanel {
             backing: .buffered,
             defer: false
         )
-        configure()
-    }
 
-    private func configure() {
+        // Always on top
+        level = .floating
         isFloatingPanel = true
-        hidesOnDeactivate = false
-        level = .statusBar + 1
-        collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+
+        // Fully transparent — SwiftUI handles all visuals
         isOpaque = false
         backgroundColor = .clear
-        hasShadow = true
-        isMovableByWindowBackground = false
-        isMovable = false
+        hasShadow = false
+
+        // Don't steal focus, don't hide on deactivate
+        hidesOnDeactivate = false
+        isMovableByWindowBackground = true
+
+        // Appear on ALL desktop spaces
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+
+        // Allow resizing via SwiftUI content
+        isMovable = true
     }
 
-    // Allow key status for interactions (buttons, text fields)
-    // but use nonactivatingPanel style so it doesn't steal app focus
+    // Allow the panel to become key (for interactions) even as a non-activating panel
     override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { false }
 
-    // Accept first mouse click without needing to focus first
+    // Accept first mouse click — no need to focus first
     override func sendEvent(_ event: NSEvent) {
         if event.type == .leftMouseDown {
             makeKeyAndOrderFront(nil)
         }
         super.sendEvent(event)
     }
+
+    // MARK: - Notch-aware positioning
 
     func reposition() {
         guard let screen = NSScreen.main else { return }
