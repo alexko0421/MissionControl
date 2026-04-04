@@ -13,6 +13,12 @@ class MCSocketServer {
     var onPlanReview: ((IncomingMessage, Int32) -> Void)?
     var onQuestion: ((IncomingMessage, Int32) -> Void)?
     var onQuestionResolved: ((IncomingMessage) -> Void)?
+    var onSessionStart: ((IncomingMessage) -> Void)?
+    var onSessionEnd: ((IncomingMessage) -> Void)?
+    var onSubagentStart: ((IncomingMessage) -> Void)?
+    var onSubagentStop: ((IncomingMessage) -> Void)?
+    var onNotification: ((IncomingMessage) -> Void)?
+    var onPreCompact: ((IncomingMessage) -> Void)?
 
     struct ClientConnection {
         let fd: Int32
@@ -213,6 +219,18 @@ class MCSocketServer {
             onQuestion?(msg, fd)
         case .questionResolved:
             onQuestionResolved?(msg)
+        case .sessionStart:
+            onSessionStart?(msg)
+        case .sessionEnd:
+            onSessionEnd?(msg)
+        case .subagentStart:
+            onSubagentStart?(msg)
+        case .subagentStop:
+            onSubagentStop?(msg)
+        case .notification:
+            onNotification?(msg)
+        case .preCompact:
+            onPreCompact?(msg)
         }
     }
 }

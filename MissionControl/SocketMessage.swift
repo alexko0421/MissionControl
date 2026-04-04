@@ -8,6 +8,12 @@ enum IncomingMessageType: String, Codable {
     case planReview = "plan_review"
     case question = "question"
     case questionResolved = "question_resolved"
+    case sessionStart = "session_start"
+    case sessionEnd = "session_end"
+    case subagentStart = "subagent_start"
+    case subagentStop = "subagent_stop"
+    case notification = "notification"
+    case preCompact = "pre_compact"
 }
 
 struct IncomingMessage: Codable {

@@ -100,6 +100,24 @@ class AgentStore: ObservableObject {
                 self.collapseIfNoPending()
             }
         }
+        socketServer.onSessionStart = { [weak self] msg in
+            self?.handleSessionStart(msg)
+        }
+        socketServer.onSessionEnd = { [weak self] msg in
+            self?.handleSessionEnd(msg)
+        }
+        socketServer.onSubagentStart = { [weak self] msg in
+            self?.handleSubagentStart(msg)
+        }
+        socketServer.onSubagentStop = { [weak self] msg in
+            self?.handleSubagentStop(msg)
+        }
+        socketServer.onNotification = { [weak self] msg in
+            self?.handleNotification(msg)
+        }
+        socketServer.onPreCompact = { [weak self] msg in
+            self?.handlePreCompact(msg)
+        }
         socketServer.startListening()
     }
 
@@ -222,6 +240,96 @@ class AgentStore: ObservableObject {
         }
     }
 
+    // MARK: - New Hook Event Handlers
+
+    private func handleSessionStart(_ msg: IncomingMessage) {
+        guard let agentId = msg.agentId else { return }
+        if agents.firstIndex(where: { $0.id == agentId }) == nil {
+            var agent = Agent(
+                id: agentId,
+                name: msg.name ?? agentId,
+                status: .running,
+                task: msg.task ?? "Starting...",
+                summary: "",
+                terminalLines: [],
+                nextAction: "",
+                updatedAt: Date(),
+                worktree: msg.worktree ?? msg.cwd,
+                app: msg.app,
+                tmuxSession: msg.tmuxSession,
+                tmuxWindow: msg.tmuxWindow,
+                tmuxPane: msg.tmuxPane,
+                agentType: msg.agentType
+            )
+            agent.terminalEnv = msg.terminalEnv
+            agent.tty = msg.tty
+            withAnimation(.easeInOut(duration: 0.2)) {
+                agents.append(agent)
+            }
+        } else {
+            if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+                agents[idx].terminalEnv = msg.terminalEnv
+                agents[idx].tty = msg.tty
+                if let name = msg.name { agents[idx].name = name }
+                agents[idx].status = .running
+                agents[idx].updatedAt = Date()
+            }
+        }
+    }
+
+    private func handleSessionEnd(_ msg: IncomingMessage) {
+        guard let agentId = msg.agentId else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            agents.removeAll { $0.id == agentId }
+        }
+    }
+
+    private func handleSubagentStart(_ msg: IncomingMessage) {
+        guard let agentId = msg.agentId else { return }
+        var agent = Agent(
+            id: agentId,
+            name: msg.name ?? "Sub-agent",
+            status: .running,
+            task: msg.task ?? "Working...",
+            summary: "",
+            terminalLines: [],
+            nextAction: "",
+            updatedAt: Date(),
+            worktree: msg.worktree ?? msg.cwd,
+            app: msg.app,
+            agentType: msg.agentType
+        )
+        agent.subagentParentId = msg.subagentParentId
+        agent.terminalEnv = msg.terminalEnv
+        withAnimation(.easeInOut(duration: 0.2)) {
+            agents.append(agent)
+        }
+    }
+
+    private func handleSubagentStop(_ msg: IncomingMessage) {
+        guard let agentId = msg.agentId else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            agents.removeAll { $0.id == agentId }
+        }
+    }
+
+    private func handleNotification(_ msg: IncomingMessage) {
+        guard let agentId = msg.agentId else { return }
+        if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            if let task = msg.task { agents[idx].task = task }
+            if let summary = msg.summary { agents[idx].summary = summary }
+            agents[idx].updatedAt = Date()
+        }
+    }
+
+    private func handlePreCompact(_ msg: IncomingMessage) {
+        guard let agentId = msg.agentId else { return }
+        if let idx = agents.firstIndex(where: { $0.id == agentId }) {
+            agents[idx].task = "Compacting context..."
+            agents[idx].updatedAt = Date()
+        }
+    }
+
     // MARK: - Socket Message Handlers
 
     private func handleStatusUpdate(_ msg: IncomingMessage) {
@@ -243,6 +351,9 @@ class AgentStore: ObservableObject {
                 if let tmuxSession = msg.tmuxSession { agents[idx].tmuxSession = tmuxSession }
                 if let tmuxWindow = msg.tmuxWindow { agents[idx].tmuxWindow = tmuxWindow }
                 if let tmuxPane = msg.tmuxPane { agents[idx].tmuxPane = tmuxPane }
+                if let env = msg.terminalEnv { agents[idx].terminalEnv = env }
+                if let tty = msg.tty { agents[idx].tty = tty }
+                if let parentId = msg.subagentParentId { agents[idx].subagentParentId = parentId }
                 agents[idx].updatedAt = Date()
             }
 
@@ -268,6 +379,9 @@ class AgentStore: ObservableObject {
                 tmuxPane: msg.tmuxPane,
                 agentType: msg.agentType
             )
+            agent.terminalEnv = msg.terminalEnv
+            agent.tty = msg.tty
+            agent.subagentParentId = msg.subagentParentId
 
             withAnimation(.easeInOut(duration: 0.2)) {
                 agents.append(agent)
