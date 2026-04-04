@@ -850,6 +850,12 @@ class AgentStore: ObservableObject {
         }
     }
 
+    func jumpToAgent(_ agent: Agent) {
+        Task {
+            await JumpEngine.jump(to: agent)
+        }
+    }
+
     func dismissAlert() {
         withAnimation(.easeOut(duration: 0.3)) {
             activeAlert = nil
