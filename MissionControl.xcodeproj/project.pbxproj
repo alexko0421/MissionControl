@@ -30,7 +30,6 @@
 		A094EE2A7297B2230E45F457 /* BridgeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DCA0805760981810D2F1439 /* BridgeModels.swift */; };
 		A16E9FAF43F02498FBF4D2B8 /* MCSocketServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA974632EE036081251304E5 /* MCSocketServer.swift */; };
 		A349860985E8BC70B35E64A0 /* PlanReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBE9CF740A802A63C68A123B /* PlanReviewView.swift */; };
-		A4E2B1E990A4E4D9F1174600 /* ChiptuneEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3381C6CD87C8C71B879B0029 /* ChiptuneEngine.swift */; };
 		AEFBC322630B61F6C3690007 /* TmuxJumper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D446ED46CA428C124687DC38 /* TmuxJumper.swift */; };
 		BEF901D6CA7FDC079E558640 /* FloatingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C3584F32DE0F76E15442837 /* FloatingPanel.swift */; };
 		C4743423AE7822B8D064106B /* TMuxBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D35A893FADD2B3ECFCBC0F9 /* TMuxBridge.swift */; };
@@ -52,7 +51,6 @@
 		1DCA0805760981810D2F1439 /* BridgeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeModels.swift; sourceTree = "<group>"; };
 		274CAA66182D794BC954AD1E /* HookGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookGuard.swift; sourceTree = "<group>"; };
 		2A4E9378EEEA38DCD5F6FB8F /* SocketMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketMessage.swift; sourceTree = "<group>"; };
-		3381C6CD87C8C71B879B0029 /* ChiptuneEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChiptuneEngine.swift; sourceTree = "<group>"; };
 		342D488663D26F0E3A3E6018 /* mc-bridge */ = {isa = PBXFileReference; path = "mc-bridge"; sourceTree = "<group>"; };
 		368FE371F0B34B2F84F66559 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3790E8CD7136C646D710B611 /* WarpJumper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WarpJumper.swift; sourceTree = "<group>"; };
@@ -143,7 +141,6 @@
 				CD80219C23C6E929034D3869 /* SharedComponents.swift */,
 				2A4E9378EEEA38DCD5F6FB8F /* SocketMessage.swift */,
 				6D35A893FADD2B3ECFCBC0F9 /* TMuxBridge.swift */,
-				C70C36C018292AD1E4883EC9 /* Audio */,
 				D475756B96033A010606E5DC /* Helpers */,
 				17F7F126B1A7D3A93214658E /* Jumping */,
 				059C5E2B758D75727A848D98 /* UI */,
@@ -161,14 +158,6 @@
 				159E813D160780BD3F96D760 /* SocketClient.swift */,
 			);
 			path = Bridge;
-			sourceTree = "<group>";
-		};
-		C70C36C018292AD1E4883EC9 /* Audio */ = {
-			isa = PBXGroup;
-			children = (
-				3381C6CD87C8C71B879B0029 /* ChiptuneEngine.swift */,
-			);
-			path = Audio;
 			sourceTree = "<group>";
 		};
 		D475756B96033A010606E5DC /* Helpers */ = {
@@ -308,7 +297,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				18EBB7589717682CACEE3C82 /* AgentStore.swift in Sources */,
-				A4E2B1E990A4E4D9F1174600 /* ChiptuneEngine.swift in Sources */,
 				48EADB7755C5B21EE747109D /* CmuxJumper.swift in Sources */,
 				309202C4D767933F88AEE889 /* ContentView.swift in Sources */,
 				BEF901D6CA7FDC079E558640 /* FloatingPanel.swift in Sources */,

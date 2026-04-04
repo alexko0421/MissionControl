@@ -77,10 +77,14 @@ struct OutgoingMessage: Codable {
     let type: String
     let requestId: String
     let decision: String
+    var answer: String?
+    var reason: String?
 
     enum CodingKeys: String, CodingKey {
         case type
         case requestId = "request_id"
         case decision
+        case answer
+        case reason
     }
 }

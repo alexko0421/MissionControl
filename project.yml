@@ -10,10 +10,17 @@ targets:
   MissionControl:
     type: application
     platform: macOS
+    dependencies:
+      - target: mc-bridge
     sources:
       - path: MissionControl
         excludes:
           - "Bridge/**"
+    postCompileScripts:
+      - script: |
+          mkdir -p "${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Helpers"
+          cp "${BUILT_PRODUCTS_DIR}/mc-bridge" "${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Helpers/mc-bridge"
+        name: "Embed mc-bridge into app bundle"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.missioncontrol.app

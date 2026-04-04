@@ -7,6 +7,7 @@ class MCSocketServer {
     private var listenerFD: Int32 = -1
     private var clientConnections: [Int32: ClientConnection] = [:]
     private var listenerSource: DispatchSourceRead?
+    private(set) var pendingResponseFDs: Set<Int32> = []
 
     var onStatusUpdate: ((IncomingMessage) -> Void)?
     var onPermissionRequest: ((IncomingMessage, Int32) -> Void)?
@@ -119,10 +120,12 @@ class MCSocketServer {
             return
         }
         data.append(0x0A) // newline
-        data.withUnsafeBytes { ptr in
-            guard let baseAddress = ptr.baseAddress else { return }
-            _ = send(clientFD, baseAddress, data.count, 0)
+        let sent = data.withUnsafeBytes { ptr -> Int in
+            guard let baseAddress = ptr.baseAddress else { return -1 }
+            return send(clientFD, baseAddress, data.count, 0)
         }
+        print("MCSocketServer: sent \(sent) bytes to fd=\(clientFD)")
+        pendingResponseFDs.remove(clientFD)
     }
 
     // MARK: - Private
@@ -162,12 +165,29 @@ class MCSocketServer {
     private func readFromClient(fd: Int32) {
         let bufferSize = 4096
         var rawBuffer = [UInt8](repeating: 0, count: bufferSize)
-        let bytesRead = recv(fd, &rawBuffer, bufferSize, 0)
+        let bytesRead = recv(fd, &rawBuffer, bufferSize, MSG_DONTWAIT)
 
-        if bytesRead <= 0 {
-            // Client disconnected or error
+        if bytesRead < 0 {
+            let err = errno
+            if err == EAGAIN || err == EWOULDBLOCK {
+                // No data available right now — keep connection open (waiting for more or sending response later)
+                return
+            }
+            // Real error — close connection
             if let source = clientConnections[fd]?.source {
                 source.cancel()
+            }
+            return
+        }
+
+        if bytesRead == 0 {
+            // Client disconnected — but only close if we don't have a pending response for this fd
+            // Check if this fd is being held for a permission/plan/question response
+            let isPending = pendingResponseFDs.contains(fd)
+            if !isPending {
+                if let source = clientConnections[fd]?.source {
+                    source.cancel()
+                }
             }
             return
         }
@@ -212,10 +232,13 @@ class MCSocketServer {
         case .statusUpdate:
             onStatusUpdate?(msg)
         case .permissionRequest:
+            pendingResponseFDs.insert(fd)
             onPermissionRequest?(msg, fd)
         case .planReview:
+            pendingResponseFDs.insert(fd)
             onPlanReview?(msg, fd)
         case .question:
+            pendingResponseFDs.insert(fd)
             onQuestion?(msg, fd)
         case .questionResolved:
             onQuestionResolved?(msg)

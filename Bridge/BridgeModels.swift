@@ -31,4 +31,6 @@ struct BridgeResponse: Codable {
     var type: String?
     var request_id: String?
     var decision: String?
+    var answer: String?
+    var reason: String?
 }

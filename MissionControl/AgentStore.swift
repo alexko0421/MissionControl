@@ -222,7 +222,7 @@ class AgentStore: ObservableObject {
             if agent.id == viewingAgentId { return false }
             let age = now.timeIntervalSince(agent.updatedAt)
             // idle > 2 hours → remove
-            if agent.status == .idle && age > 7200 { return true }
+            if agent.status == .idle && age > 1800 { return true }
             return false
         }
 
@@ -474,11 +474,14 @@ class AgentStore: ObservableObject {
     func respondPermission(agentId: String, allow: Bool) {
         guard let idx = agents.firstIndex(where: { $0.id == agentId }) else { return }
 
-        // Send response back through socket (bridge is blocking, waiting for this)
+        // Send response back through socket
         if let requestId = agents[idx].pendingPermission?.id {
             let decision = allow ? "approve" : "deny"
             sendDecision(requestId: requestId, type: "permission_response", decision: decision)
         }
+
+        // PreToolUse hook returns {"permissionDecision":"allow"} which
+        // skips Claude Code's TUI prompt entirely — no send-keys needed
 
         withAnimation(.easeInOut(duration: 0.2)) {
             agents[idx].pendingPermission = nil
@@ -491,6 +494,16 @@ class AgentStore: ObservableObject {
             playSound("Basso")
         }
         collapseIfNoPending()
+    }
+
+    /// Write directly to a TTY device (no tmux needed, no focus needed)
+    nonisolated static func writeToTTY(tty: String, text: String) {
+        guard let fh = FileHandle(forWritingAtPath: tty) else {
+            print("[MC] writeToTTY failed: cannot open \(tty)")
+            return
+        }
+        fh.write(Data(text.utf8))
+        fh.closeFile()
     }
 
     private func handlePlanReview(_ msg: IncomingMessage, clientFD: Int32) {
@@ -591,9 +604,6 @@ class AgentStore: ObservableObject {
     func approvePlan(agentId: String, requestId: String) {
         sendDecision(requestId: requestId, type: "plan_response", decision: "approve")
         if let idx = agents.firstIndex(where: { $0.id == agentId }) {
-            if let target = agents[idx].tmuxTarget {
-                Task.detached { TMuxBridge.sendKeys(target: target, command: "y") }
-            }
             withAnimation(.easeInOut(duration: 0.2)) {
                 agents[idx].pendingPlan = nil
                 agents[idx].status = .running
@@ -606,9 +616,6 @@ class AgentStore: ObservableObject {
     func denyPlan(agentId: String, requestId: String) {
         sendDecision(requestId: requestId, type: "plan_response", decision: "deny")
         if let idx = agents.firstIndex(where: { $0.id == agentId }) {
-            if let target = agents[idx].tmuxTarget {
-                Task.detached { TMuxBridge.sendKeys(target: target, command: "n") }
-            }
             withAnimation(.easeInOut(duration: 0.2)) {
                 agents[idx].pendingPlan = nil
                 agents[idx].updatedAt = Date()
@@ -623,25 +630,23 @@ class AgentStore: ObservableObject {
             let decision = option.sendKey == "3" || option.sendKey == "n" ? "deny" : "approve"
             sendDecision(requestId: questionId, type: "question_response", decision: decision)
 
+            // Send keystroke to terminal
             let sendKey = option.sendKey
-            // Try tmux first (from agent info), then fallback to finding any active tmux session
-            let target = agents[idx].tmuxTarget ?? Self.findActiveTmuxTarget()
-            print("[MC-DEBUG] respondQuestion: agentId=\(agentId), sendKey=\(sendKey), target=\(target ?? "nil")")
-            if let target = target {
-                print("[MC-DEBUG] Sending via tmux: \(sendKey) -> \(target)")
-                Task.detached {
+            let tmuxTarget = agents[idx].tmuxTarget
+            let tty = agents[idx].tty
+            let appName = agents[idx].app ?? "Terminal"
+
+            Task.detached {
+                Thread.sleep(forTimeInterval: 0.3)
+                if let target = tmuxTarget {
                     let parts = sendKey.components(separatedBy: " ")
                     for part in parts {
                         TMuxBridge.sendKeys(target: target, command: part)
                         if parts.count > 1 { Thread.sleep(forTimeInterval: 0.1) }
                     }
-                }
-            } else {
-                // No tmux available, try AppleScript as last resort
-                let appName = agents[idx].app ?? "Terminal"
-                print("[MC-DEBUG] No tmux, falling back to AppleScript for: \(appName)")
-                Task.detached {
-                    Thread.sleep(forTimeInterval: 2.0)
+                } else if let tty = tty {
+                    Self.writeToTTY(tty: tty, text: sendKey + "\n")
+                } else {
                     Self.typeInTerminal(text: sendKey, appName: appName)
                 }
             }
@@ -707,10 +712,7 @@ class AgentStore: ObservableObject {
     func respondFreeText(agentId: String, text: String) {
         if let idx = agents.firstIndex(where: { $0.id == agentId }) {
             let questionId = agents[idx].pendingQuestion?.id ?? ""
-            sendDecision(requestId: questionId, type: "question_response", decision: "approve")
-            if let target = agents[idx].tmuxTarget {
-                Task.detached { TMuxBridge.sendKeys(target: target, command: text) }
-            }
+            sendDecision(requestId: questionId, type: "question_response", decision: "approve", answer: text)
             withAnimation(.easeInOut(duration: 0.2)) {
                 agents[idx].pendingQuestion = nil
                 agents[idx].status = .running
@@ -760,9 +762,11 @@ class AgentStore: ObservableObject {
         }
     }
 
-    private func sendDecision(requestId: String, type: String, decision: String) {
+    private func sendDecision(requestId: String, type: String, decision: String, answer: String? = nil, reason: String? = nil) {
         guard let clientFD = pendingClientFDs.removeValue(forKey: requestId) else { return }
-        let response = OutgoingMessage(type: type, requestId: requestId, decision: decision)
+        var response = OutgoingMessage(type: type, requestId: requestId, decision: decision)
+        response.answer = answer
+        response.reason = reason
         socketServer.sendResponse(to: clientFD, message: response)
     }
 

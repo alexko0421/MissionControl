@@ -42,6 +42,27 @@ struct HookRouter {
 
         case "pretooluse":
             let toolName = hookInput["tool_name"] as? String ?? "tool"
+
+            // Route by tool name
+            switch toolName {
+            case "AskUserQuestion":
+                handleAskUserQuestion(agentId: agentId, tmux: tmux, env: env, name: name)
+                return
+
+            case "ExitPlanMode", "EnterPlanMode":
+                handlePlanReview(agentId: agentId, tmux: tmux, env: env, name: name)
+                return
+
+            case "Bash", "Write", "Edit", "NotebookEdit", "MultiEdit":
+                // Dangerous tools — block and ask MissionControl for approval
+                handlePreToolPermission(agentId: agentId, toolName: toolName, tmux: tmux, env: env, name: name)
+                return
+
+            default:
+                break
+            }
+
+            // Safe tools (Read, Glob, Grep, etc.) — just update status
             let msg = BridgeMessage(
                 type: "status_update", agent_id: agentId,
                 status: "running", task: "Using \(toolName)...",
@@ -170,6 +191,113 @@ struct HookRouter {
         let response = SocketClient.send(msg, waitForResponse: true, timeout: 86400)
         if let response = response, response.decision == "deny" {
             let output = ["decision": "block", "reason": "User denied in MissionControl"]
+            if let data = try? JSONSerialization.data(withJSONObject: output),
+               let str = String(data: data, encoding: .utf8) {
+                print(str)
+            }
+        } else {
+            print("{\"approve\":true}")
+        }
+    }
+
+    private func handlePreToolPermission(agentId: String, toolName: String,
+                                        tmux: (session: String?, window: Int, pane: Int),
+                                        env: [String: String], name: String) {
+        var toolInput: [String: String] = [:]
+        if let raw = hookInput["tool_input"] as? [String: Any] {
+            for (k, v) in raw {
+                toolInput[k] = v as? String ?? "\(v)"
+            }
+        }
+        let requestId = "perm_\(UUID().uuidString.prefix(12))"
+
+        let msg = BridgeMessage(
+            type: "permission_request", agent_id: agentId,
+            name: name, app: EnvCollector.detectApp(),
+            tmux_session: tmux.session, tmux_window: tmux.session != nil ? tmux.window : nil,
+            tmux_pane: tmux.session != nil ? tmux.pane : nil,
+            request_id: requestId, tool: toolName, tool_input: toolInput,
+            terminal_env: env
+        )
+
+        let response = SocketClient.send(msg, waitForResponse: true, timeout: 600)
+        if let response = response, response.decision == "deny" {
+            // Block the tool call
+            let output: [String: Any] = [
+                "permissionDecision": "deny",
+                "reason": response.reason ?? "User denied in MissionControl"
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: output),
+               let str = String(data: data, encoding: .utf8) {
+                print(str)
+            }
+        } else {
+            // Allow — this skips Claude Code's TUI prompt entirely
+            print("{\"permissionDecision\":\"allow\"}")
+        }
+    }
+
+    private func handleAskUserQuestion(agentId: String,
+                                       tmux: (session: String?, window: Int, pane: Int),
+                                       env: [String: String], name: String) {
+        // Extract question from tool_input
+        var toolInput: [String: String] = [:]
+        if let raw = hookInput["tool_input"] as? [String: Any] {
+            for (k, v) in raw {
+                toolInput[k] = v as? String ?? "\(v)"
+            }
+        }
+        let question = toolInput["question"] ?? "Agent is asking a question"
+        let requestId = "q_\(UUID().uuidString.prefix(12))"
+
+        let msg = BridgeMessage(
+            type: "question", agent_id: agentId,
+            name: name, app: EnvCollector.detectApp(),
+            tmux_session: tmux.session, tmux_window: tmux.session != nil ? tmux.window : nil,
+            tmux_pane: tmux.session != nil ? tmux.pane : nil,
+            request_id: requestId, question: question,
+            terminal_env: env
+        )
+
+        let response = SocketClient.send(msg, waitForResponse: true, timeout: 600)
+        // Return allow with the answer so Claude Code gets the user's response
+        if let response = response, let answer = response.answer {
+            // Return updatedInput with the answer
+            let output: [String: Any] = [
+                "permissionDecision": "allow",
+                "updatedInput": ["question": question, "answer": answer]
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: output),
+               let str = String(data: data, encoding: .utf8) {
+                print(str)
+            }
+        } else {
+            // No answer — let Claude Code show its own prompt
+            print("{\"approve\":true}")
+        }
+    }
+
+    private func handlePlanReview(agentId: String,
+                                  tmux: (session: String?, window: Int, pane: Int),
+                                  env: [String: String], name: String) {
+        // Extract plan markdown from tool_input
+        var markdown = ""
+        if let raw = hookInput["tool_input"] as? [String: Any] {
+            markdown = raw["plan"] as? String ?? raw["markdown"] as? String ?? ""
+        }
+        let requestId = "plan_\(UUID().uuidString.prefix(12))"
+
+        let msg = BridgeMessage(
+            type: "plan_review", agent_id: agentId,
+            name: name, app: EnvCollector.detectApp(),
+            request_id: requestId, markdown: markdown,
+            terminal_env: env
+        )
+
+        let response = SocketClient.send(msg, waitForResponse: true, timeout: 600)
+        if let response = response, response.decision == "deny" {
+            let reason = response.reason ?? "User rejected plan in MissionControl"
+            let output = ["decision": "block", "reason": reason]
             if let data = try? JSONSerialization.data(withJSONObject: output),
                let str = String(data: data, encoding: .utf8) {
                 print(str)

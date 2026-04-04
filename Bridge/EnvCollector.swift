@@ -73,10 +73,44 @@ struct EnvCollector {
     }
 
     static func tty() -> String? {
-        if isatty(STDIN_FILENO) != 0 {
-            return String(cString: ttyname(STDIN_FILENO))
+        // Our stdin is a pipe (hook input), so isatty won't work.
+        // Instead, find the parent Claude Code process's TTY.
+        if let ttyFromEnv = ProcessInfo.processInfo.environment["TTY"] {
+            return ttyFromEnv
         }
-        return ProcessInfo.processInfo.environment["TTY"]
+        // Walk up the process tree to find a process with a TTY
+        var pid = getppid()
+        while pid > 1 {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/bin/ps")
+            process.arguments = ["-p", "\(pid)", "-o", "tty=,ppid="]
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = FileHandle.nullDevice
+            do {
+                try process.run()
+                process.waitUntilExit()
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let parts = output.split(separator: " ", maxSplits: 1).map(String.init)
+                if parts.count >= 1 {
+                    let tty = parts[0].trimmingCharacters(in: .whitespaces)
+                    if tty != "??" && tty != "-" && !tty.isEmpty {
+                        // Convert "ttys001" to "/dev/ttys001"
+                        let fullPath = tty.hasPrefix("/dev/") ? tty : "/dev/\(tty)"
+                        if FileManager.default.fileExists(atPath: fullPath) {
+                            return fullPath
+                        }
+                    }
+                    if parts.count >= 2, let ppid = Int(parts[1].trimmingCharacters(in: .whitespaces)) {
+                        pid = Int32(ppid)
+                        continue
+                    }
+                }
+            } catch {}
+            break
+        }
+        return nil
     }
 
     static func projectName(cwd: String) -> String {

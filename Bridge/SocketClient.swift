@@ -48,13 +48,21 @@ struct SocketClient {
         var rawBuffer = [UInt8](repeating: 0, count: 4096)
         while true {
             let bytesRead = recv(fd, &rawBuffer, rawBuffer.count, 0)
-            if bytesRead <= 0 { break }
+            if bytesRead < 0 {
+                // Error (including timeout) — stop waiting
+                break
+            }
+            if bytesRead == 0 {
+                // Server closed connection — if we have data, process it; otherwise it's a clean close
+                break
+            }
             buffer.append(contentsOf: rawBuffer[0..<bytesRead])
             if buffer.contains(0x0A) { break }
         }
         close(fd)
 
         guard let newlineIdx = buffer.firstIndex(of: 0x0A) else {
+            // No response received — default to approve (timeout or server closed without responding)
             return BridgeResponse(decision: "approve")
         }
         let lineData = buffer[buffer.startIndex..<newlineIdx]
