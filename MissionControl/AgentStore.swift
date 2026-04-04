@@ -54,6 +54,7 @@ class AgentStore: ObservableObject {
 
     let socketServer = MCSocketServer()
     let rateLimitMonitor = RateLimitMonitor()
+    let hookGuard = HookGuard()
     private var pendingClientFDs: [String: Int32] = [:]  // requestId → clientFD
 
     private let statusDir  = FileManager.default.homeDirectoryForCurrentUser
@@ -68,12 +69,14 @@ class AgentStore: ObservableObject {
         setupSocketServer()
         startPolling()
         rateLimitMonitor.startMonitoring()
+        hookGuard.startGuarding()
     }
 
     func stopWatching() {
         socketServer.stopListening()
         stopPolling()
         rateLimitMonitor.stopMonitoring()
+        hookGuard.stopGuarding()
     }
 
     private func setupSocketServer() {
