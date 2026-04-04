@@ -34,7 +34,14 @@ struct IncomingMessage: Codable {
 
     // question fields
     var question: String?
-    var options: [[String: String]]?  // [{id, label, sendKey}]
+    var options: [[String: String]]?
+
+    // New fields for Vibe Island parity
+    var event: String?
+    var terminalEnv: TerminalEnv?
+    var subagentParentId: String?
+    var tty: String?
+    var cwd: String?
 
     enum CodingKeys: String, CodingKey {
         case type
@@ -51,6 +58,10 @@ struct IncomingMessage: Codable {
         case toolInput = "tool_input"
         case markdown
         case question, options
+        case event
+        case terminalEnv = "terminal_env"
+        case subagentParentId = "subagent_parent_id"
+        case tty, cwd
     }
 }
 

@@ -111,6 +111,34 @@ struct AgentQuestion: Identifiable {
     }
 }
 
+// MARK: - Terminal Environment (for precise terminal jumping)
+
+struct TerminalEnv: Codable, Equatable {
+    var itermSessionId: String?
+    var termSessionId: String?
+    var termProgram: String?
+    var tmux: String?
+    var tmuxPane: String?
+    var kittyWindowId: String?
+    var cfBundleIdentifier: String?
+    var cmuxWorkspaceId: String?
+    var cmuxSurfaceId: String?
+    var cmuxSocketPath: String?
+
+    enum CodingKeys: String, CodingKey {
+        case itermSessionId = "ITERM_SESSION_ID"
+        case termSessionId = "TERM_SESSION_ID"
+        case termProgram = "TERM_PROGRAM"
+        case tmux = "TMUX"
+        case tmuxPane = "TMUX_PANE"
+        case kittyWindowId = "KITTY_WINDOW_ID"
+        case cfBundleIdentifier = "__CFBundleIdentifier"
+        case cmuxWorkspaceId = "CMUX_WORKSPACE_ID"
+        case cmuxSurfaceId = "CMUX_SURFACE_ID"
+        case cmuxSocketPath = "CMUX_SOCKET_PATH"
+    }
+}
+
 // MARK: - Agent
 
 struct Agent: Identifiable, Codable {
@@ -128,6 +156,10 @@ struct Agent: Identifiable, Codable {
     var tmuxWindow: Int?
     var tmuxPane: Int?
     var agentType: String?
+    var terminalEnv: TerminalEnv?
+    var subagentParentId: String?
+    var isSubagent: Bool { subagentParentId != nil }
+    var tty: String?
     var pendingPermission: PermissionRequest? = nil
     var pendingPlan: PlanReview? = nil
     var pendingQuestion: AgentQuestion? = nil
@@ -135,6 +167,7 @@ struct Agent: Identifiable, Codable {
     enum CodingKeys: String, CodingKey {
         case id, name, status, task, summary, terminalLines, nextAction, updatedAt
         case worktree, app, tmuxSession, tmuxWindow, tmuxPane, agentType
+        case terminalEnv, subagentParentId, tty
     }
 
     /// Shared language setting — set by the app on launch / change
