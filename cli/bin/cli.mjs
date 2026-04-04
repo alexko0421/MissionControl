@@ -11,6 +11,7 @@ const __dirname = dirname(__filename);
 
 const HOOKS_SRC = join(__dirname, '..', 'hooks');
 const MC_DIR = join(homedir(), '.mission-control');
+const BRIDGE_CMD = `${join(MC_DIR, 'bin', 'mc-bridge')}`;
 const HOOKS_DEST = join(MC_DIR, 'hooks');
 const CLAUDE_SETTINGS = join(homedir(), '.claude', 'settings.json');
 const APP_PATH = '/Applications/MissionControl.app';
@@ -30,49 +31,70 @@ const LEGACY_HOOK_FILES = [
 
 const HOOK_CONFIG = {
   hooks: {
-    Stop: [
+    SessionStart: [
       {
         matcher: '',
-        hooks: [
-          {
-            type: 'command',
-            command: `python3 ${join(HOOKS_DEST, 'mc-claude-hook.py')}`,
-          },
-        ],
+        hooks: [{ type: 'command', command: `${BRIDGE_CMD} --source claude --event SessionStart` }],
+      },
+    ],
+    SessionEnd: [
+      {
+        matcher: '',
+        hooks: [{ type: 'command', command: `${BRIDGE_CMD} --source claude --event SessionEnd` }],
       },
     ],
     UserPromptSubmit: [
       {
         matcher: '',
-        hooks: [
-          {
-            type: 'command',
-            command: `python3 ${join(HOOKS_DEST, 'mc-prompt-hook.py')}`,
-          },
-        ],
+        hooks: [{ type: 'command', command: `${BRIDGE_CMD} --source claude --event UserPromptSubmit` }],
       },
     ],
-    PermissionRequest: [
+    PreToolUse: [
       {
-        matcher: '*',
-        hooks: [
-          {
-            type: 'command',
-            command: `python3 ${join(HOOKS_DEST, 'mc-permission-hook.py')}`,
-            timeout: 300,
-          },
-        ],
+        matcher: '',
+        hooks: [{ type: 'command', command: `${BRIDGE_CMD} --source claude --event PreToolUse` }],
       },
     ],
     PostToolUse: [
       {
         matcher: '',
-        hooks: [
-          {
-            type: 'command',
-            command: `python3 ${join(HOOKS_DEST, 'mc-posttool-hook.py')}`,
-          },
-        ],
+        hooks: [{ type: 'command', command: `${BRIDGE_CMD} --source claude --event PostToolUse` }],
+      },
+    ],
+    Notification: [
+      {
+        matcher: '',
+        hooks: [{ type: 'command', command: `${BRIDGE_CMD} --source claude --event Notification` }],
+      },
+    ],
+    Stop: [
+      {
+        matcher: '',
+        hooks: [{ type: 'command', command: `${BRIDGE_CMD} --source claude --event Stop` }],
+      },
+    ],
+    SubagentStart: [
+      {
+        matcher: '',
+        hooks: [{ type: 'command', command: `${BRIDGE_CMD} --source claude --event SubagentStart` }],
+      },
+    ],
+    SubagentStop: [
+      {
+        matcher: '',
+        hooks: [{ type: 'command', command: `${BRIDGE_CMD} --source claude --event SubagentStop` }],
+      },
+    ],
+    PreCompact: [
+      {
+        matcher: '',
+        hooks: [{ type: 'command', command: `${BRIDGE_CMD} --source claude --event PreCompact` }],
+      },
+    ],
+    PermissionRequest: [
+      {
+        matcher: '*',
+        hooks: [{ type: 'command', command: `${BRIDGE_CMD} --source claude --event PermissionRequest`, timeout: 86400 }],
       },
     ],
   },
@@ -84,7 +106,9 @@ function missionControlHookPaths() {
 
 function isManagedMissionControlCommand(command) {
   if (!command) return false;
-  return missionControlHookPaths().some((hookPath) => command.includes(hookPath));
+  return missionControlHookPaths().some((hookPath) => command.includes(hookPath))
+    || command.includes('mc-bridge')
+    || command.includes('mission-control');
 }
 
 const CODEX_CONFIG = join(homedir(), '.codex');
@@ -197,8 +221,12 @@ function setupClaudeCode() {
       }
     }
   }
+  // Install statusLine for rate limit tracking
+  if (!settings.statusLine) {
+    settings.statusLine = `${join(MC_DIR, 'bin', 'mc-statusline')}`;
+  }
   writeFileSync(CLAUDE_SETTINGS, JSON.stringify(settings, null, 2) + '\n');
-  console.log('  ✓ Configured Claude Code hooks');
+  console.log('  ✓ Configured Claude Code hooks + statusLine');
 }
 
 function setupCodex() {
@@ -281,6 +309,16 @@ function setup() {
       unlinkSync(dest);
       console.log(`  ✓ Removed legacy ${file}`);
     }
+  }
+
+  // Install bridge binary shim
+  const shimSrc = join(__dirname, 'mc-bridge');
+  const shimDest = join(MC_DIR, 'bin', 'mc-bridge');
+  mkdirSync(join(MC_DIR, 'bin'), { recursive: true });
+  if (existsSync(shimSrc)) {
+    copyFileSync(shimSrc, shimDest);
+    try { execSync(`chmod +x "${shimDest}"`, { stdio: 'pipe' }); } catch {}
+    console.log('  ✓ Installed mc-bridge launcher shim');
   }
 
   if (targetAgent) {
