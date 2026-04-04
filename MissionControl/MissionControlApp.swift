@@ -13,7 +13,7 @@ struct MissionControlApp: App {
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
-    private var panel: FloatingPanel!
+    private var panel: NotchPanel!
     private var store = AgentStore()
     private var globalMonitor: Any?
     private var localMonitor: Any?
@@ -21,8 +21,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Create the floating panel
-        let contentRect = NSRect(x: 0, y: 0, width: 10, height: 10)
-        panel = FloatingPanel(contentRect: contentRect)
+        panel = NotchPanel()
 
         let hostingView = NSHostingView(rootView:
             ContentView()
@@ -31,22 +30,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         hostingView.translatesAutoresizingMaskIntoConstraints = false
         panel.contentView = hostingView
 
-        // Position near top-center of screen
-        if let screen = NSScreen.main {
-            let screenFrame = screen.visibleFrame
-            let panelWidth = panel.frame.width > 10 ? panel.frame.width : 400
-            let x = screenFrame.midX - panelWidth / 2
-            let y = screenFrame.maxY - 45
-            panel.setFrameOrigin(NSPoint(x: x, y: y))
+        panel.reposition()
+
+        NotificationCenter.default.addObserver(forName: NSWindow.didResizeNotification, object: panel, queue: .main) { [weak self] _ in
+            self?.panel.reposition()
         }
 
-        // Re-center when panel resizes
-        NotificationCenter.default.addObserver(forName: NSWindow.didResizeNotification, object: panel, queue: .main) { [weak self] _ in
-            guard let self = self, let screen = NSScreen.main else { return }
-            let screenFrame = screen.visibleFrame
-            let panelFrame = self.panel.frame
-            let x = screenFrame.midX - panelFrame.width / 2
-            self.panel.setFrameOrigin(NSPoint(x: x, y: panelFrame.origin.y))
+        // Handle screen changes (external display, etc.)
+        NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.panel.reposition()
         }
         panel.orderFrontRegardless()
 
