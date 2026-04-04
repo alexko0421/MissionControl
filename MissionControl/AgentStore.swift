@@ -55,7 +55,10 @@ class AgentStore: ObservableObject {
     let socketServer = MCSocketServer()
     let rateLimitMonitor = RateLimitMonitor()
     let hookGuard = HookGuard()
-    let chiptuneEngine = ChiptuneEngine()
+    // System sounds for different events
+    private func playSound(_ name: String) {
+        NSSound(named: NSSound.Name(name))?.play()
+    }
     private var pendingClientFDs: [String: Int32] = [:]  // requestId → clientFD
 
     private let statusDir  = FileManager.default.homeDirectoryForCurrentUser
@@ -369,7 +372,7 @@ class AgentStore: ObservableObject {
                 triggerAlert(for: agents[idx])
             }
             if newStatus == .done && oldStatus != .done {
-                chiptuneEngine.playSessionDone()
+                playSound("Glass")
             }
         } else {
             // New agent
@@ -481,9 +484,9 @@ class AgentStore: ObservableObject {
             agents[idx].updatedAt = Date()
         }
         if allow {
-            chiptuneEngine.playApproved()
+            playSound("Hero")
         } else {
-            chiptuneEngine.playDenied()
+            playSound("Basso")
         }
         collapseIfNoPending()
     }
@@ -578,7 +581,7 @@ class AgentStore: ObservableObject {
             task: agent.task
         )
         activeAlert = alert
-        chiptuneEngine.playAlert()
+        playSound("Glass")
     }
 
     // MARK: - Approve / Deny Actions
