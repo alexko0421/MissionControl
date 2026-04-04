@@ -14,11 +14,11 @@ struct NotchDetector {
 
         if hasNotch(screen: screen) {
             let x = frame.midX - panelSize.width / 2
-            let y = frame.maxY - panelSize.height
+            let y = frame.maxY - panelSize.height - 3
             return NSPoint(x: x, y: y)
         } else {
             let x = visibleFrame.midX - panelSize.width / 2
-            let y = visibleFrame.maxY - panelSize.height
+            let y = visibleFrame.maxY - panelSize.height - 3
             return NSPoint(x: x, y: y)
         }
     }
