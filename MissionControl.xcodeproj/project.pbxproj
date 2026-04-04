@@ -15,28 +15,39 @@
 		41FAE60D1F44616D3ED6FBF0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 368FE371F0B34B2F84F66559 /* Assets.xcassets */; };
 		5330C852D09BB43E679EA616 /* MissionControlApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F3A0C88E4BC3F8B5E50F748 /* MissionControlApp.swift */; };
 		68235A75600D0FCDDB595175 /* QuestionCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A352BA37C23B210451A4F758 /* QuestionCardView.swift */; };
+		83F570C85A54061F197873A4 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A75C5C80F4D5F331738862 /* main.swift */; };
+		A094EE2A7297B2230E45F457 /* BridgeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DCA0805760981810D2F1439 /* BridgeModels.swift */; };
 		A16E9FAF43F02498FBF4D2B8 /* MCSocketServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA974632EE036081251304E5 /* MCSocketServer.swift */; };
 		A349860985E8BC70B35E64A0 /* PlanReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBE9CF740A802A63C68A123B /* PlanReviewView.swift */; };
-		F1A2B3C4D5E6F7A8B9C0D1E2 /* PermissionCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* PermissionCardView.swift */; };
 		BEF901D6CA7FDC079E558640 /* FloatingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C3584F32DE0F76E15442837 /* FloatingPanel.swift */; };
 		C4743423AE7822B8D064106B /* TMuxBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D35A893FADD2B3ECFCBC0F9 /* TMuxBridge.swift */; };
 		C8C4E552AC4084FF1B41E072 /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD80219C23C6E929034D3869 /* SharedComponents.swift */; };
+		D0389396921639745542A592 /* EnvCollector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05E084EA316FF8EA6DD1E6C6 /* EnvCollector.swift */; };
+		D3B39EF83C59D02A492C4E4A /* SocketClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159E813D160780BD3F96D760 /* SocketClient.swift */; };
+		D873BFAEC62358DC36E383E7 /* HookRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6079E904D5BF8B432321AC0 /* HookRouter.swift */; };
+		FD2222395362032247798458 /* PermissionCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634F82122A97869B40E7821A /* PermissionCardView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		05E084EA316FF8EA6DD1E6C6 /* EnvCollector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvCollector.swift; sourceTree = "<group>"; };
+		159E813D160780BD3F96D760 /* SocketClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketClient.swift; sourceTree = "<group>"; };
+		1DCA0805760981810D2F1439 /* BridgeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeModels.swift; sourceTree = "<group>"; };
 		2A4E9378EEEA38DCD5F6FB8F /* SocketMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketMessage.swift; sourceTree = "<group>"; };
 		368FE371F0B34B2F84F66559 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		45103C04701C5A509D84DB0C /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		4BF55F93FA2531E7F621514C /* MissionControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MissionControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C3584F32DE0F76E15442837 /* FloatingPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPanel.swift; sourceTree = "<group>"; };
 		5CD92BF1CC6D897039953331 /* AgentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentStore.swift; sourceTree = "<group>"; };
+		634F82122A97869B40E7821A /* PermissionCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionCardView.swift; sourceTree = "<group>"; };
 		6D35A893FADD2B3ECFCBC0F9 /* TMuxBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMuxBridge.swift; sourceTree = "<group>"; };
 		8F3A0C88E4BC3F8B5E50F748 /* MissionControlApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissionControlApp.swift; sourceTree = "<group>"; };
 		90B28051075A78C99DBF5BE6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		A1A75C5C80F4D5F331738862 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		A352BA37C23B210451A4F758 /* QuestionCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionCardView.swift; sourceTree = "<group>"; };
+		A6079E904D5BF8B432321AC0 /* HookRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookRouter.swift; sourceTree = "<group>"; };
+		B37EF36FEAF34D150C354764 /* mc-bridge */ = {isa = PBXFileReference; includeInIndex = 0; path = "mc-bridge"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA974632EE036081251304E5 /* MCSocketServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCSocketServer.swift; sourceTree = "<group>"; };
 		CB5DA73C418961FC7B25AE84 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		A1B2C3D4E5F6A7B8C9D0E1F2 /* PermissionCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionCardView.swift; sourceTree = "<group>"; };
 		CBE9CF740A802A63C68A123B /* PlanReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanReviewView.swift; sourceTree = "<group>"; };
 		CD80219C23C6E929034D3869 /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
 		DA4443C620C5229203586BB1 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -46,6 +57,7 @@
 		3B25E04B574036BA7A981D8A /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				B37EF36FEAF34D150C354764 /* mc-bridge */,
 				4BF55F93FA2531E7F621514C /* MissionControl.app */,
 			);
 			name = Products;
@@ -62,7 +74,7 @@
 				BA974632EE036081251304E5 /* MCSocketServer.swift */,
 				8F3A0C88E4BC3F8B5E50F748 /* MissionControlApp.swift */,
 				45103C04701C5A509D84DB0C /* Models.swift */,
-				A1B2C3D4E5F6A7B8C9D0E1F2 /* PermissionCardView.swift */,
+				634F82122A97869B40E7821A /* PermissionCardView.swift */,
 				CBE9CF740A802A63C68A123B /* PlanReviewView.swift */,
 				A352BA37C23B210451A4F758 /* QuestionCardView.swift */,
 				DA4443C620C5229203586BB1 /* SettingsView.swift */,
@@ -73,9 +85,22 @@
 			path = MissionControl;
 			sourceTree = "<group>";
 		};
+		ACB2B6011F841190904ECEB6 /* Bridge */ = {
+			isa = PBXGroup;
+			children = (
+				1DCA0805760981810D2F1439 /* BridgeModels.swift */,
+				05E084EA316FF8EA6DD1E6C6 /* EnvCollector.swift */,
+				A6079E904D5BF8B432321AC0 /* HookRouter.swift */,
+				A1A75C5C80F4D5F331738862 /* main.swift */,
+				159E813D160780BD3F96D760 /* SocketClient.swift */,
+			);
+			path = Bridge;
+			sourceTree = "<group>";
+		};
 		D6225A6F52A2317AEC5F4E35 = {
 			isa = PBXGroup;
 			children = (
+				ACB2B6011F841190904ECEB6 /* Bridge */,
 				679A8DA0AC938BDEA21A997A /* MissionControl */,
 				3B25E04B574036BA7A981D8A /* Products */,
 			);
@@ -101,6 +126,24 @@
 			productName = MissionControl;
 			productReference = 4BF55F93FA2531E7F621514C /* MissionControl.app */;
 			productType = "com.apple.product-type.application";
+		};
+		9E67262A51A61C2A857D53CE /* mc-bridge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F717E1CD94BE9E1E32AD6F69 /* Build configuration list for PBXNativeTarget "mc-bridge" */;
+			buildPhases = (
+				B774F0C7997382D68BF390C7 /* Sources */,
+				6F4BB1B2B62D265BA0C49580 /* Copy bridge binary */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "mc-bridge";
+			packageProductDependencies = (
+			);
+			productName = "mc-bridge";
+			productReference = B37EF36FEAF34D150C354764 /* mc-bridge */;
+			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
 
@@ -128,6 +171,7 @@
 			projectRoot = "";
 			targets = (
 				81E129A51BDC5064CE5423DA /* MissionControl */,
+				9E67262A51A61C2A857D53CE /* mc-bridge */,
 			);
 		};
 /* End PBXProject section */
@@ -143,7 +187,40 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		6F4BB1B2B62D265BA0C49580 /* Copy bridge binary */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy bridge binary";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"${PROJECT_DIR}/MissionControl/Helpers\"\ncp \"${BUILT_PRODUCTS_DIR}/mc-bridge\" \"${PROJECT_DIR}/MissionControl/Helpers/mc-bridge\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
+		B774F0C7997382D68BF390C7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A094EE2A7297B2230E45F457 /* BridgeModels.swift in Sources */,
+				D0389396921639745542A592 /* EnvCollector.swift in Sources */,
+				D873BFAEC62358DC36E383E7 /* HookRouter.swift in Sources */,
+				D3B39EF83C59D02A492C4E4A /* SocketClient.swift in Sources */,
+				83F570C85A54061F197873A4 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		BD78A88B458121846C74AECF /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -154,7 +231,7 @@
 				A16E9FAF43F02498FBF4D2B8 /* MCSocketServer.swift in Sources */,
 				5330C852D09BB43E679EA616 /* MissionControlApp.swift in Sources */,
 				3FE08E3257F665D905CF0150 /* Models.swift in Sources */,
-				F1A2B3C4D5E6F7A8B9C0D1E2 /* PermissionCardView.swift in Sources */,
+				FD2222395362032247798458 /* PermissionCardView.swift in Sources */,
 				A349860985E8BC70B35E64A0 /* PlanReviewView.swift in Sources */,
 				68235A75600D0FCDDB595175 /* QuestionCardView.swift in Sources */,
 				0345BF2ECC960D6BE0288CED /* SettingsView.swift in Sources */,
@@ -245,6 +322,22 @@
 			};
 			name = Release;
 		};
+		84DA0829EF21B6423DDC6E6B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.missioncontrol.mc-bridge";
+				PRODUCT_NAME = "mc-bridge";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
 		A0C9CBDC3F5D2E021AA2C810 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -308,6 +401,22 @@
 			};
 			name = Debug;
 		};
+		C1B9BB6ACC28F0B6440EF6F2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.missioncontrol.mc-bridge";
+				PRODUCT_NAME = "mc-bridge";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
 		F6FA3A7FD6D24EB27B2B2C0A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -347,6 +456,15 @@
 			buildConfigurations = (
 				A0C9CBDC3F5D2E021AA2C810 /* Debug */,
 				1B5C4A6A1B7CE9EBE1B91095 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F717E1CD94BE9E1E32AD6F69 /* Build configuration list for PBXNativeTarget "mc-bridge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				84DA0829EF21B6423DDC6E6B /* Debug */,
+				C1B9BB6ACC28F0B6440EF6F2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

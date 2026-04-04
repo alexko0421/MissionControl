@@ -11,7 +11,9 @@ targets:
     type: application
     platform: macOS
     sources:
-      - MissionControl
+      - path: MissionControl
+        excludes:
+          - "Bridge/**"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.missioncontrol.app
@@ -23,3 +25,18 @@ targets:
         INFOPLIST_KEY_NSMainStoryboardFile: ""
         INFOPLIST_KEY_CFBundleDisplayName: "Mission Control"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  mc-bridge:
+    type: tool
+    platform: macOS
+    sources:
+      - path: Bridge
+    settings:
+      base:
+        PRODUCT_NAME: mc-bridge
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        SWIFT_VERSION: "5.9"
+    postBuildScripts:
+      - script: |
+          mkdir -p "${PROJECT_DIR}/MissionControl/Helpers"
+          cp "${BUILT_PRODUCTS_DIR}/mc-bridge" "${PROJECT_DIR}/MissionControl/Helpers/mc-bridge"
+        name: "Copy bridge binary"

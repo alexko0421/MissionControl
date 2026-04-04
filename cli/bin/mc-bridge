@@ -1,0 +1,39 @@
+#!/bin/bash
+# mc-bridge launcher shim — finds and runs the compiled bridge binary
+
+BINARY_NAME="mc-bridge"
+CACHE_FILE="$HOME/.mission-control/.bridge-cache"
+
+# 1. Try direct paths
+for APP_PATH in \
+    "/Applications/MissionControl.app/Contents/Helpers/$BINARY_NAME" \
+    "$HOME/Desktop/MissionControl.app/Contents/Helpers/$BINARY_NAME" \
+    "$HOME/Applications/MissionControl.app/Contents/Helpers/$BINARY_NAME"; do
+    if [ -x "$APP_PATH" ]; then
+        exec "$APP_PATH" "$@"
+    fi
+done
+
+# 2. Try cache
+if [ -f "$CACHE_FILE" ]; then
+    CACHED=$(cat "$CACHE_FILE")
+    if [ -x "$CACHED" ]; then
+        exec "$CACHED" "$@"
+    fi
+fi
+
+# 3. Try Spotlight
+FOUND=$(mdfind "kMDItemCFBundleIdentifier == 'com.missioncontrol.app'" 2>/dev/null | head -1)
+if [ -n "$FOUND" ] && [ -x "$FOUND/Contents/Helpers/$BINARY_NAME" ]; then
+    echo "$FOUND/Contents/Helpers/$BINARY_NAME" > "$CACHE_FILE"
+    exec "$FOUND/Contents/Helpers/$BINARY_NAME" "$@"
+fi
+
+# 4. Fallback: try Python bridge
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)/hooks"
+if [ -f "$SCRIPT_DIR/mc-bridge.py" ]; then
+    exec python3 "$SCRIPT_DIR/mc-bridge.py" "$@"
+fi
+
+echo "mc-bridge: binary not found" >&2
+exit 1
