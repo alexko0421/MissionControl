@@ -88,7 +88,7 @@ class AgentStore: ObservableObject {
             self?.handleStatusUpdate(msg)
         }
         socketServer.onPermissionRequest = { [weak self] msg, clientFD in
-            self?.handlePermissionRequest(msg)
+            self?.handlePermissionRequest(msg, clientFD: clientFD)
         }
         socketServer.onPlanReview = { [weak self] msg, clientFD in
             self?.handlePlanReview(msg, clientFD: clientFD)
@@ -420,7 +420,7 @@ class AgentStore: ObservableObject {
         }
     }
 
-    private func handlePermissionRequest(_ msg: IncomingMessage) {
+    private func handlePermissionRequest(_ msg: IncomingMessage, clientFD: Int32) {
         guard let agentId = msg.agentId,
               let requestId = msg.requestId,
               let tool = msg.tool else { return }
@@ -431,6 +431,9 @@ class AgentStore: ObservableObject {
             toolInput: msg.toolInput ?? [:],
             receivedAt: Date()
         )
+
+        // Store clientFD so respondPermission can send response back through socket
+        pendingClientFDs[requestId] = clientFD
 
         if let idx = agents.firstIndex(where: { $0.id == agentId }) {
             if let session = msg.tmuxSession {
@@ -470,12 +473,11 @@ class AgentStore: ObservableObject {
 
     func respondPermission(agentId: String, allow: Bool) {
         guard let idx = agents.firstIndex(where: { $0.id == agentId }) else { return }
-        let sendKey = allow ? "y" : "n"
 
-        if let target = agents[idx].tmuxTarget {
-            Task.detached {
-                TMuxBridge.sendKeys(target: target, command: sendKey)
-            }
+        // Send response back through socket (bridge is blocking, waiting for this)
+        if let requestId = agents[idx].pendingPermission?.id {
+            let decision = allow ? "approve" : "deny"
+            sendDecision(requestId: requestId, type: "permission_response", decision: decision)
         }
 
         withAnimation(.easeInOut(duration: 0.2)) {
