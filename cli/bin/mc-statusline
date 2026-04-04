@@ -1,0 +1,13 @@
+#!/bin/bash
+# Extracts rate_limits from Claude Code statusLine JSON and caches to /tmp
+INPUT=$(cat)
+echo "$INPUT" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    rl = data.get('rate_limits', data.get('rateLimits', {}))
+    if rl:
+        json.dump(rl, open('/tmp/mc-rate-limits.json', 'w'))
+except:
+    pass
+" 2>/dev/null
