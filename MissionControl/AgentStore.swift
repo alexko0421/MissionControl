@@ -55,6 +55,7 @@ class AgentStore: ObservableObject {
     let socketServer = MCSocketServer()
     let rateLimitMonitor = RateLimitMonitor()
     let hookGuard = HookGuard()
+    let chiptuneEngine = ChiptuneEngine()
     private var pendingClientFDs: [String: Int32] = [:]  // requestId → clientFD
 
     private let statusDir  = FileManager.default.homeDirectoryForCurrentUser
@@ -367,6 +368,9 @@ class AgentStore: ObservableObject {
             if oldStatus != newStatus && (newStatus == .blocked || newStatus == .done) {
                 triggerAlert(for: agents[idx])
             }
+            if newStatus == .done && oldStatus != .done {
+                chiptuneEngine.playSessionDone()
+            }
         } else {
             // New agent
             var agent = Agent(
@@ -476,6 +480,11 @@ class AgentStore: ObservableObject {
             agents[idx].status = allow ? .running : agents[idx].status
             agents[idx].updatedAt = Date()
         }
+        if allow {
+            chiptuneEngine.playApproved()
+        } else {
+            chiptuneEngine.playDenied()
+        }
         collapseIfNoPending()
     }
 
@@ -569,7 +578,7 @@ class AgentStore: ObservableObject {
             task: agent.task
         )
         activeAlert = alert
-        NSSound(named: "Ping")?.play()
+        chiptuneEngine.playAlert()
     }
 
     // MARK: - Approve / Deny Actions
