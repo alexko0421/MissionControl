@@ -23,8 +23,18 @@ class NotchPanel: NSPanel {
         isMovable = false
     }
 
-    override var canBecomeKey: Bool { false }
+    // Allow key status for interactions (buttons, text fields)
+    // but use nonactivatingPanel style so it doesn't steal app focus
+    override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    // Accept first mouse click without needing to focus first
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .leftMouseDown {
+            makeKeyAndOrderFront(nil)
+        }
+        super.sendEvent(event)
+    }
 
     func reposition() {
         guard let screen = NSScreen.main else { return }
