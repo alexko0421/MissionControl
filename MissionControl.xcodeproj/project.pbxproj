@@ -7,53 +7,113 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		00DF73BCD14D087060A5E91F /* VSCodeJumper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D84491D754D4002B933E8318 /* VSCodeJumper.swift */; };
 		0345BF2ECC960D6BE0288CED /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA4443C620C5229203586BB1 /* SettingsView.swift */; };
+		071044013561CE2ECF689B3E /* WarpJumper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3790E8CD7136C646D710B611 /* WarpJumper.swift */; };
 		18EBB7589717682CACEE3C82 /* AgentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CD92BF1CC6D897039953331 /* AgentStore.swift */; };
 		309202C4D767933F88AEE889 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB5DA73C418961FC7B25AE84 /* ContentView.swift */; };
+		3940ED837A91B6A632D48EC0 /* KittyJumper.swift in Sources */ = {isa = PBXBuildFile; fileRef = B103082F36073BE8DADDD484 /* KittyJumper.swift */; };
 		3A286A12B6D55D4CA2139884 /* SocketMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A4E9378EEEA38DCD5F6FB8F /* SocketMessage.swift */; };
 		3FE08E3257F665D905CF0150 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45103C04701C5A509D84DB0C /* Models.swift */; };
 		41FAE60D1F44616D3ED6FBF0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 368FE371F0B34B2F84F66559 /* Assets.xcassets */; };
+		48EADB7755C5B21EE747109D /* CmuxJumper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B53F67BFC6ED2B9F77EB8F /* CmuxJumper.swift */; };
 		5330C852D09BB43E679EA616 /* MissionControlApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F3A0C88E4BC3F8B5E50F748 /* MissionControlApp.swift */; };
 		68235A75600D0FCDDB595175 /* QuestionCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A352BA37C23B210451A4F758 /* QuestionCardView.swift */; };
+		70FB1D8FB02A0DB8E975E96B /* ITermJumper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D34DEBB8F8F0F7D89D27F3E /* ITermJumper.swift */; };
+		747A458E6E7D3CFA502F12A5 /* GenericJumper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45FF2F9442EB26B1BE51DF8 /* GenericJumper.swift */; };
+		78D66E7988B3AB0D20F6CCE1 /* TerminalAppJumper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F95CA59043477989A3B5308 /* TerminalAppJumper.swift */; };
 		83F570C85A54061F197873A4 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A75C5C80F4D5F331738862 /* main.swift */; };
+		863EBB58FEBEB786CD826E7C /* NotchPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51B5C8B99860CDEF9003AFC1 /* NotchPanel.swift */; };
+		89904AFBB5D67B603F5A41ED /* RateLimitMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0234690345A20C814543E82B /* RateLimitMonitor.swift */; };
+		8BECC578705963045025ED50 /* TerminalJumper.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC33FDC7B68A5F900196686E /* TerminalJumper.swift */; };
+		94F8E15AC1A46492ADF7D7A4 /* GhosttyJumper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F96A6EC2D0B9D398F0FD07E /* GhosttyJumper.swift */; };
 		A094EE2A7297B2230E45F457 /* BridgeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DCA0805760981810D2F1439 /* BridgeModels.swift */; };
 		A16E9FAF43F02498FBF4D2B8 /* MCSocketServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA974632EE036081251304E5 /* MCSocketServer.swift */; };
 		A349860985E8BC70B35E64A0 /* PlanReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBE9CF740A802A63C68A123B /* PlanReviewView.swift */; };
+		A4E2B1E990A4E4D9F1174600 /* ChiptuneEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3381C6CD87C8C71B879B0029 /* ChiptuneEngine.swift */; };
+		AEFBC322630B61F6C3690007 /* TmuxJumper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D446ED46CA428C124687DC38 /* TmuxJumper.swift */; };
 		BEF901D6CA7FDC079E558640 /* FloatingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C3584F32DE0F76E15442837 /* FloatingPanel.swift */; };
 		C4743423AE7822B8D064106B /* TMuxBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D35A893FADD2B3ECFCBC0F9 /* TMuxBridge.swift */; };
 		C8C4E552AC4084FF1B41E072 /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD80219C23C6E929034D3869 /* SharedComponents.swift */; };
 		D0389396921639745542A592 /* EnvCollector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05E084EA316FF8EA6DD1E6C6 /* EnvCollector.swift */; };
 		D3B39EF83C59D02A492C4E4A /* SocketClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159E813D160780BD3F96D760 /* SocketClient.swift */; };
 		D873BFAEC62358DC36E383E7 /* HookRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6079E904D5BF8B432321AC0 /* HookRouter.swift */; };
+		DFACB509631EB365B5327DA4 /* HookGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 274CAA66182D794BC954AD1E /* HookGuard.swift */; };
+		E655D18EDBD97EC580C25877 /* NotchDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED0CEF96C251B60F353EABF3 /* NotchDetector.swift */; };
+		EC2718AC941FE9D5A53838D6 /* JumpEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B612066C349F99106E10736E /* JumpEngine.swift */; };
 		FD2222395362032247798458 /* PermissionCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634F82122A97869B40E7821A /* PermissionCardView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0234690345A20C814543E82B /* RateLimitMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RateLimitMonitor.swift; sourceTree = "<group>"; };
 		05E084EA316FF8EA6DD1E6C6 /* EnvCollector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvCollector.swift; sourceTree = "<group>"; };
+		06B53F67BFC6ED2B9F77EB8F /* CmuxJumper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CmuxJumper.swift; sourceTree = "<group>"; };
 		159E813D160780BD3F96D760 /* SocketClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketClient.swift; sourceTree = "<group>"; };
 		1DCA0805760981810D2F1439 /* BridgeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeModels.swift; sourceTree = "<group>"; };
+		274CAA66182D794BC954AD1E /* HookGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookGuard.swift; sourceTree = "<group>"; };
 		2A4E9378EEEA38DCD5F6FB8F /* SocketMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketMessage.swift; sourceTree = "<group>"; };
+		3381C6CD87C8C71B879B0029 /* ChiptuneEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChiptuneEngine.swift; sourceTree = "<group>"; };
+		342D488663D26F0E3A3E6018 /* mc-bridge */ = {isa = PBXFileReference; path = "mc-bridge"; sourceTree = "<group>"; };
 		368FE371F0B34B2F84F66559 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3790E8CD7136C646D710B611 /* WarpJumper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WarpJumper.swift; sourceTree = "<group>"; };
+		3D34DEBB8F8F0F7D89D27F3E /* ITermJumper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ITermJumper.swift; sourceTree = "<group>"; };
+		3F96A6EC2D0B9D398F0FD07E /* GhosttyJumper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyJumper.swift; sourceTree = "<group>"; };
 		45103C04701C5A509D84DB0C /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		4BF55F93FA2531E7F621514C /* MissionControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MissionControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		51B5C8B99860CDEF9003AFC1 /* NotchPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchPanel.swift; sourceTree = "<group>"; };
 		5C3584F32DE0F76E15442837 /* FloatingPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPanel.swift; sourceTree = "<group>"; };
 		5CD92BF1CC6D897039953331 /* AgentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentStore.swift; sourceTree = "<group>"; };
 		634F82122A97869B40E7821A /* PermissionCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionCardView.swift; sourceTree = "<group>"; };
 		6D35A893FADD2B3ECFCBC0F9 /* TMuxBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMuxBridge.swift; sourceTree = "<group>"; };
+		6F95CA59043477989A3B5308 /* TerminalAppJumper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalAppJumper.swift; sourceTree = "<group>"; };
 		8F3A0C88E4BC3F8B5E50F748 /* MissionControlApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissionControlApp.swift; sourceTree = "<group>"; };
 		90B28051075A78C99DBF5BE6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		A1A75C5C80F4D5F331738862 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		A352BA37C23B210451A4F758 /* QuestionCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionCardView.swift; sourceTree = "<group>"; };
+		A45FF2F9442EB26B1BE51DF8 /* GenericJumper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenericJumper.swift; sourceTree = "<group>"; };
 		A6079E904D5BF8B432321AC0 /* HookRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookRouter.swift; sourceTree = "<group>"; };
+		B103082F36073BE8DADDD484 /* KittyJumper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KittyJumper.swift; sourceTree = "<group>"; };
 		B37EF36FEAF34D150C354764 /* mc-bridge */ = {isa = PBXFileReference; includeInIndex = 0; path = "mc-bridge"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B612066C349F99106E10736E /* JumpEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JumpEngine.swift; sourceTree = "<group>"; };
 		BA974632EE036081251304E5 /* MCSocketServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCSocketServer.swift; sourceTree = "<group>"; };
 		CB5DA73C418961FC7B25AE84 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		CBE9CF740A802A63C68A123B /* PlanReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanReviewView.swift; sourceTree = "<group>"; };
 		CD80219C23C6E929034D3869 /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
+		D446ED46CA428C124687DC38 /* TmuxJumper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TmuxJumper.swift; sourceTree = "<group>"; };
+		D84491D754D4002B933E8318 /* VSCodeJumper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VSCodeJumper.swift; sourceTree = "<group>"; };
 		DA4443C620C5229203586BB1 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		ED0CEF96C251B60F353EABF3 /* NotchDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchDetector.swift; sourceTree = "<group>"; };
+		FC33FDC7B68A5F900196686E /* TerminalJumper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalJumper.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
+		059C5E2B758D75727A848D98 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				ED0CEF96C251B60F353EABF3 /* NotchDetector.swift */,
+				51B5C8B99860CDEF9003AFC1 /* NotchPanel.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		17F7F126B1A7D3A93214658E /* Jumping */ = {
+			isa = PBXGroup;
+			children = (
+				06B53F67BFC6ED2B9F77EB8F /* CmuxJumper.swift */,
+				A45FF2F9442EB26B1BE51DF8 /* GenericJumper.swift */,
+				3F96A6EC2D0B9D398F0FD07E /* GhosttyJumper.swift */,
+				3D34DEBB8F8F0F7D89D27F3E /* ITermJumper.swift */,
+				B612066C349F99106E10736E /* JumpEngine.swift */,
+				B103082F36073BE8DADDD484 /* KittyJumper.swift */,
+				6F95CA59043477989A3B5308 /* TerminalAppJumper.swift */,
+				FC33FDC7B68A5F900196686E /* TerminalJumper.swift */,
+				D446ED46CA428C124687DC38 /* TmuxJumper.swift */,
+				D84491D754D4002B933E8318 /* VSCodeJumper.swift */,
+				3790E8CD7136C646D710B611 /* WarpJumper.swift */,
+			);
+			path = Jumping;
+			sourceTree = "<group>";
+		};
 		3B25E04B574036BA7A981D8A /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -70,6 +130,7 @@
 				368FE371F0B34B2F84F66559 /* Assets.xcassets */,
 				CB5DA73C418961FC7B25AE84 /* ContentView.swift */,
 				5C3584F32DE0F76E15442837 /* FloatingPanel.swift */,
+				274CAA66182D794BC954AD1E /* HookGuard.swift */,
 				90B28051075A78C99DBF5BE6 /* Info.plist */,
 				BA974632EE036081251304E5 /* MCSocketServer.swift */,
 				8F3A0C88E4BC3F8B5E50F748 /* MissionControlApp.swift */,
@@ -77,10 +138,15 @@
 				634F82122A97869B40E7821A /* PermissionCardView.swift */,
 				CBE9CF740A802A63C68A123B /* PlanReviewView.swift */,
 				A352BA37C23B210451A4F758 /* QuestionCardView.swift */,
+				0234690345A20C814543E82B /* RateLimitMonitor.swift */,
 				DA4443C620C5229203586BB1 /* SettingsView.swift */,
 				CD80219C23C6E929034D3869 /* SharedComponents.swift */,
 				2A4E9378EEEA38DCD5F6FB8F /* SocketMessage.swift */,
 				6D35A893FADD2B3ECFCBC0F9 /* TMuxBridge.swift */,
+				C70C36C018292AD1E4883EC9 /* Audio */,
+				D475756B96033A010606E5DC /* Helpers */,
+				17F7F126B1A7D3A93214658E /* Jumping */,
+				059C5E2B758D75727A848D98 /* UI */,
 			);
 			path = MissionControl;
 			sourceTree = "<group>";
@@ -95,6 +161,22 @@
 				159E813D160780BD3F96D760 /* SocketClient.swift */,
 			);
 			path = Bridge;
+			sourceTree = "<group>";
+		};
+		C70C36C018292AD1E4883EC9 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				3381C6CD87C8C71B879B0029 /* ChiptuneEngine.swift */,
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
+		D475756B96033A010606E5DC /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+				342D488663D26F0E3A3E6018 /* mc-bridge */,
+			);
+			path = Helpers;
 			sourceTree = "<group>";
 		};
 		D6225A6F52A2317AEC5F4E35 = {
@@ -226,18 +308,34 @@
 			buildActionMask = 2147483647;
 			files = (
 				18EBB7589717682CACEE3C82 /* AgentStore.swift in Sources */,
+				A4E2B1E990A4E4D9F1174600 /* ChiptuneEngine.swift in Sources */,
+				48EADB7755C5B21EE747109D /* CmuxJumper.swift in Sources */,
 				309202C4D767933F88AEE889 /* ContentView.swift in Sources */,
 				BEF901D6CA7FDC079E558640 /* FloatingPanel.swift in Sources */,
+				747A458E6E7D3CFA502F12A5 /* GenericJumper.swift in Sources */,
+				94F8E15AC1A46492ADF7D7A4 /* GhosttyJumper.swift in Sources */,
+				DFACB509631EB365B5327DA4 /* HookGuard.swift in Sources */,
+				70FB1D8FB02A0DB8E975E96B /* ITermJumper.swift in Sources */,
+				EC2718AC941FE9D5A53838D6 /* JumpEngine.swift in Sources */,
+				3940ED837A91B6A632D48EC0 /* KittyJumper.swift in Sources */,
 				A16E9FAF43F02498FBF4D2B8 /* MCSocketServer.swift in Sources */,
 				5330C852D09BB43E679EA616 /* MissionControlApp.swift in Sources */,
 				3FE08E3257F665D905CF0150 /* Models.swift in Sources */,
+				E655D18EDBD97EC580C25877 /* NotchDetector.swift in Sources */,
+				863EBB58FEBEB786CD826E7C /* NotchPanel.swift in Sources */,
 				FD2222395362032247798458 /* PermissionCardView.swift in Sources */,
 				A349860985E8BC70B35E64A0 /* PlanReviewView.swift in Sources */,
 				68235A75600D0FCDDB595175 /* QuestionCardView.swift in Sources */,
+				89904AFBB5D67B603F5A41ED /* RateLimitMonitor.swift in Sources */,
 				0345BF2ECC960D6BE0288CED /* SettingsView.swift in Sources */,
 				C8C4E552AC4084FF1B41E072 /* SharedComponents.swift in Sources */,
 				3A286A12B6D55D4CA2139884 /* SocketMessage.swift in Sources */,
 				C4743423AE7822B8D064106B /* TMuxBridge.swift in Sources */,
+				78D66E7988B3AB0D20F6CCE1 /* TerminalAppJumper.swift in Sources */,
+				8BECC578705963045025ED50 /* TerminalJumper.swift in Sources */,
+				AEFBC322630B61F6C3690007 /* TmuxJumper.swift in Sources */,
+				00DF73BCD14D087060A5E91F /* VSCodeJumper.swift in Sources */,
+				071044013561CE2ECF689B3E /* WarpJumper.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
