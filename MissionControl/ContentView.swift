@@ -392,8 +392,10 @@ struct SessionListPanel: View {
             .padding(.vertical, 24)
             .frame(maxWidth: .infinity)
         } else {
-            // Only show completed agents — running/blocked are visible in capsule bar and approve tab
-            let visibleAgents = store.sortedAgents.filter { $0.status == .done }
+            // Hide agents with pending permission/plan (shown in approve tab) or running status
+            let visibleAgents = store.sortedAgents.filter {
+                $0.pendingPermission == nil && $0.pendingPlan == nil && $0.status != .running && $0.status != .blocked
+            }
             let groupedAgents = Dictionary(grouping: visibleAgents, by: { $0.displayApp })
             let priorityOrder: [AgentStatus] = [.blocked, .running, .done, .idle]
             let sortedKeys = groupedAgents.keys.sorted { a, b in
@@ -592,13 +594,16 @@ struct SessionRow: View {
 
                 Spacer(minLength: 8)
 
-                Text(agent.status.label)
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .foregroundColor(agent.status.color)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .frame(minWidth: 44)
-                    .background(agent.status.color.opacity(0.15), in: Capsule())
+                // Only show status badge for completed agents
+                if agent.status == .done {
+                    Text(agent.status.label)
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundColor(agent.status.color)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .frame(minWidth: 44)
+                        .background(agent.status.color.opacity(0.15), in: Capsule())
+                }
 
                 if store.isFocusModeActive && store.focusedAgentId == agent.id {
                     Image(systemName: "scope")
