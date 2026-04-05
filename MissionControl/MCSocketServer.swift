@@ -7,7 +7,7 @@ class MCSocketServer {
     private var listenerFD: Int32 = -1
     private var clientConnections: [Int32: ClientConnection] = [:]
     private var listenerSource: DispatchSourceRead?
-    private(set) var pendingResponseFDs: Set<Int32> = []
+    var pendingResponseFDs: Set<Int32> = []
 
     var onStatusUpdate: ((IncomingMessage) -> Void)?
     var onPermissionRequest: ((IncomingMessage, Int32) -> Void)?
@@ -124,8 +124,15 @@ class MCSocketServer {
             guard let baseAddress = ptr.baseAddress else { return -1 }
             return send(clientFD, baseAddress, data.count, 0)
         }
-        print("MCSocketServer: sent \(sent) bytes to fd=\(clientFD)")
+        if sent < 0 {
+            print("MCSocketServer: send failed for fd=\(clientFD): \(String(cString: strerror(errno)))")
+        } else {
+            print("MCSocketServer: sent \(sent) bytes to fd=\(clientFD)")
+        }
         pendingResponseFDs.remove(clientFD)
+        // Clean shutdown: close the FD after sending response
+        clientConnections.removeValue(forKey: clientFD)
+        close(clientFD)
     }
 
     // MARK: - Private
