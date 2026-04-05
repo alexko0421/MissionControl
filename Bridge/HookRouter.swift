@@ -170,6 +170,15 @@ struct HookRouter {
                                   tmux: (session: String?, window: Int, pane: Int),
                                   env: [String: String], name: String) {
         let toolName = hookInput["tool_name"] as? String ?? "Unknown"
+
+        // Safe tools — don't send permission request, just approve silently
+        let safeTools: Set<String> = ["Read", "Grep", "Glob", "LSP", "Agent", "TaskCreate",
+                                       "TaskUpdate", "TaskGet", "TaskList", "ToolSearch",
+                                       "WebSearch", "WebFetch", "TodoWrite"]
+        if safeTools.contains(toolName) {
+            print("{\"approve\":true}")
+            return
+        }
         var toolInput: [String: String] = [:]
         if let raw = hookInput["tool_input"] as? [String: Any] {
             for (k, v) in raw {

@@ -392,8 +392,8 @@ struct SessionListPanel: View {
             .padding(.vertical, 24)
             .frame(maxWidth: .infinity)
         } else {
-            // Hide agents that have pending permission/plan (they show in approve tab)
-            let visibleAgents = store.sortedAgents.filter { $0.pendingPermission == nil && $0.pendingPlan == nil }
+            // Only show completed agents — running/blocked are visible in capsule bar and approve tab
+            let visibleAgents = store.sortedAgents.filter { $0.status == .done }
             let groupedAgents = Dictionary(grouping: visibleAgents, by: { $0.displayApp })
             let priorityOrder: [AgentStatus] = [.blocked, .running, .done, .idle]
             let sortedKeys = groupedAgents.keys.sorted { a, b in
