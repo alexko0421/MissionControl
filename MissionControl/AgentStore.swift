@@ -474,14 +474,57 @@ class AgentStore: ObservableObject {
     func respondPermission(agentId: String, allow: Bool) {
         guard let idx = agents.firstIndex(where: { $0.id == agentId }) else { return }
 
-        // Send response back through socket
+        // Send response back through socket (for any waiting hook process)
         if let requestId = agents[idx].pendingPermission?.id {
             let decision = allow ? "approve" : "deny"
             sendDecision(requestId: requestId, type: "permission_response", decision: decision)
         }
 
-        // PreToolUse hook returns {"permissionDecision":"allow"} which
-        // skips Claude Code's TUI prompt entirely — no send-keys needed
+        // Send keystroke to terminal to answer the native prompt
+        let tmuxTarget = agents[idx].tmuxTarget
+        let tty = agents[idx].tty
+        let appName = agents[idx].app ?? "Terminal"
+        // Debug log to file
+        let debugLine = "[MC-PERM] agentId=\(agentId) tmux=\(tmuxTarget ?? "nil") tty=\(tty ?? "nil") app=\(appName) allow=\(allow)\n"
+        if let data = debugLine.data(using: .utf8) {
+            let logPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".mission-control/mc-perm.log")
+            if let fh = try? FileHandle(forWritingTo: logPath) {
+                fh.seekToEndOfFile(); fh.write(data); fh.closeFile()
+            } else {
+                FileManager.default.createFile(atPath: logPath.path, contents: data)
+            }
+        }
+
+        Task.detached {
+            Thread.sleep(forTimeInterval: 0.3)
+            if let target = tmuxTarget {
+                if allow {
+                    TMuxBridge.sendKeys(target: target, command: "Enter")
+                } else {
+                    TMuxBridge.sendKeys(target: target, command: "Escape")
+                }
+            } else if let tty = tty {
+                AgentStore.writeToTTY(tty: tty, text: allow ? "\r" : "\u{1b}")
+            } else {
+                // AppleScript fallback — bring terminal to front and press Enter/Escape
+                let keyCode = allow ? 36 : 53  // 36=Return, 53=Escape
+                let script = """
+                tell application "System Events"
+                    tell process "\(appName)"
+                        set frontmost to true
+                        delay 0.3
+                        key code \(keyCode)
+                    end tell
+                end tell
+                """
+                var errorDict: NSDictionary?
+                let appleScript = NSAppleScript(source: script)
+                appleScript?.executeAndReturnError(&errorDict)
+                if let error = errorDict {
+                    print("[MC] AppleScript error: \(error)")
+                }
+            }
+        }
 
         withAnimation(.easeInOut(duration: 0.2)) {
             agents[idx].pendingPermission = nil

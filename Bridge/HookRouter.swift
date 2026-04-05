@@ -53,14 +53,8 @@ struct HookRouter {
                 handlePlanReview(agentId: agentId, tmux: tmux, env: env, name: name)
                 return
 
-            case "Bash", "Write", "Edit", "NotebookEdit", "MultiEdit":
-                // Notify MissionControl (non-blocking) — actual approval goes through PermissionRequest hook
-                let msg = BridgeMessage(
-                    type: "status_update", agent_id: agentId,
-                    status: "blocked", task: "Waiting: \(toolName)...",
-                    event: event, terminal_env: env
-                )
-                _ = SocketClient.send(msg)
+            case "Bash", "Write", "Edit", "NotebookEdit", "MultiEdit", "Skill":
+                handlePreToolPermission(agentId: agentId, toolName: toolName, tmux: tmux, env: env, name: name)
                 return
 
             default:

@@ -181,12 +181,20 @@ class MCSocketServer {
         }
 
         if bytesRead == 0 {
-            // Client disconnected — but only close if we don't have a pending response for this fd
-            // Check if this fd is being held for a permission/plan/question response
+            // Client disconnected
             let isPending = pendingResponseFDs.contains(fd)
-            if !isPending {
+            if isPending {
+                // Pending response: stop the read source to prevent busy loop,
+                // but keep the FD open so sendResponse can write to it later.
                 if let source = clientConnections[fd]?.source {
+                    clientConnections[fd]?.source = nil
+                    source.setCancelHandler {}  // Override: don't close the FD
                     source.cancel()
+                }
+            } else {
+                // Not pending: close normally
+                if let source = clientConnections[fd]?.source {
+                    source.cancel()  // cancelHandler will close(fd)
                 }
             }
             return

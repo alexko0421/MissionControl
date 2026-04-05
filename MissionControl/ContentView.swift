@@ -392,7 +392,9 @@ struct SessionListPanel: View {
             .padding(.vertical, 24)
             .frame(maxWidth: .infinity)
         } else {
-            let groupedAgents = Dictionary(grouping: store.sortedAgents, by: { $0.displayApp })
+            // Hide agents that have pending permission/plan (they show in approve tab)
+            let visibleAgents = store.sortedAgents.filter { $0.pendingPermission == nil && $0.pendingPlan == nil }
+            let groupedAgents = Dictionary(grouping: visibleAgents, by: { $0.displayApp })
             let priorityOrder: [AgentStatus] = [.blocked, .running, .done, .idle]
             let sortedKeys = groupedAgents.keys.sorted { a, b in
                 let bestA = groupedAgents[a]!.compactMap { ag in priorityOrder.firstIndex(of: ag.status) }.min() ?? 99
