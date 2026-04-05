@@ -432,14 +432,11 @@ class AgentStore: ObservableObject {
             receivedAt: Date()
         )
 
-        // Clean up old permission request for this agent (if any)
+        // Clean up old permission request tracking for this agent (if any)
+        // Don't close the FD — let the old worker timeout naturally
         if let idx = agents.firstIndex(where: { $0.id == agentId }),
            let oldRequestId = agents[idx].pendingPermission?.id {
-            // Close old socket FD — the old worker is stale
-            if let oldFD = pendingClientFDs.removeValue(forKey: oldRequestId) {
-                socketServer.pendingResponseFDs.remove(oldFD)
-                close(oldFD)
-            }
+            pendingClientFDs.removeValue(forKey: oldRequestId)
         }
 
         // Store clientFD so respondPermission can send response back through socket
