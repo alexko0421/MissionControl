@@ -109,7 +109,9 @@ struct HookRouter {
             _ = SocketClient.send(msg)
 
         case "permissionrequest":
-            handlePermission(agentId: agentId, tmux: tmux, env: env, name: name)
+            // Skip — PreToolUse worker handles permission delegation via MissionControl
+            // PermissionRequest hook output can't control the terminal anyway
+            return
 
         default:
             let msg = BridgeMessage(
