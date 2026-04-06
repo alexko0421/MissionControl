@@ -106,8 +106,35 @@ struct HookRouter {
 
         case "permissionrequest":
             // Skip — PreToolUse worker handles permission delegation via MissionControl
-            // PermissionRequest hook output can't control the terminal anyway
             return
+
+        // Gemini CLI event mappings
+        case "beforeagent":
+            let msg = BridgeMessage(
+                type: "status_update", agent_id: agentId, agent_type: source,
+                name: name, status: "running", task: "Processing...",
+                worktree: cwd, app: app,
+                tmux_session: tmux.session, tmux_window: tmux.session != nil ? tmux.window : nil,
+                tmux_pane: tmux.session != nil ? tmux.pane : nil,
+                event: event, terminal_env: env, tty: tty, cwd: cwd
+            )
+            _ = SocketClient.send(msg)
+
+        case "afteragent":
+            handleStop(agentId: agentId, name: name, cwd: cwd, app: app, tmux: tmux, env: env, tty: tty)
+
+        case "beforetool":
+            let toolName = hookInput["tool_name"] as? String ?? "tool"
+            let msg = BridgeMessage(
+                type: "status_update", agent_id: agentId,
+                status: "running", task: "Using \(toolName)...",
+                event: event, terminal_env: env
+            )
+            _ = SocketClient.send(msg)
+
+        case "aftertool":
+            let clearMsg = BridgeMessage(type: "question_resolved", agent_id: agentId)
+            _ = SocketClient.send(clearMsg)
 
         default:
             let msg = BridgeMessage(
