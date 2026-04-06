@@ -72,11 +72,7 @@ struct HookRouter {
         case "posttooluse":
             let clearMsg = BridgeMessage(type: "question_resolved", agent_id: agentId)
             _ = SocketClient.send(clearMsg)
-            let msg = BridgeMessage(
-                type: "status_update", agent_id: agentId, status: "running",
-                event: event, terminal_env: env
-            )
-            _ = SocketClient.send(msg)
+            // Don't override status — Stop hook determines final state
 
         case "notification":
             let notification = hookInput["message"] as? String ?? ""
