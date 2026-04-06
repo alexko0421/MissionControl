@@ -16,9 +16,19 @@ struct PermissionCardView: View {
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                 Spacer()
-                Text(agent.name)
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.4))
+                // Show session source: tmux target or app name
+                HStack(spacing: 3) {
+                    if let tmux = agent.tmuxTarget {
+                        Image(systemName: "terminal")
+                            .font(.system(size: 8))
+                        Text(tmux)
+                            .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    } else {
+                        Text(agent.name)
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                    }
+                }
+                .foregroundStyle(.white.opacity(0.4))
             }
 
             // File path
