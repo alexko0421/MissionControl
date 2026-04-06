@@ -591,8 +591,8 @@ struct SessionRow: View {
 
                 Spacer(minLength: 8)
 
-                // Only show status badge for completed agents
-                if agent.status == .done {
+                // Show status badge for running/done/idle (not blocked — approval card handles that)
+                if agent.status != .blocked {
                     Text(agent.status.label)
                         .font(.system(size: 10, weight: .bold, design: .rounded))
                         .foregroundColor(agent.status.color)

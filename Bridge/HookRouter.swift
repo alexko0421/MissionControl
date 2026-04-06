@@ -140,16 +140,12 @@ struct HookRouter {
         let lastMessage = hookInput["last_assistant_message"] as? String ?? ""
         let stopReason = hookInput["stop_reason"] as? String ?? ""
 
-        var status = "running"
-        let msgLower = lastMessage.lowercased()
-        let questionSignals = ["?", "\u{FF1F}", "which option", "do you want", "should i",
-                               "please choose", "\u{4F60}\u{60F3}", "\u{4F60}\u{89C9}\u{5F97}", "\u{8BF7}\u{9009}\u{62E9}", "\u{4F60}\u{9078}"]
-        if questionSignals.contains(where: { msgLower.contains($0) }) {
-            status = "blocked"
-        }
-        if stopReason == "tool_use" { status = "blocked" }
-        if msgLower.contains("done") || msgLower.contains("complete") || msgLower.contains("\u{5B8C}\u{6210}") {
+        // Status based purely on stop_reason — no keyword guessing
+        let status: String
+        if stopReason == "end_turn" {
             status = "done"
+        } else {
+            status = "running"
         }
 
         let lines = lastMessage.split(separator: "\n").map(String.init).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty && $0.count > 5 }
