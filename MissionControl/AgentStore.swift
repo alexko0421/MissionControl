@@ -503,7 +503,7 @@ class AgentStore: ObservableObject {
         }
 
         Task.detached {
-            Thread.sleep(forTimeInterval: 0.3)
+            try? await Task.sleep(for: .seconds(0.3))
             if let target = tmuxTarget {
                 if allow {
                     TMuxBridge.sendKeys(target: target, command: "Enter")
@@ -687,12 +687,12 @@ class AgentStore: ObservableObject {
             let appName = agents[idx].app ?? "Terminal"
 
             Task.detached {
-                Thread.sleep(forTimeInterval: 0.3)
+            try? await Task.sleep(for: .seconds(0.3))
                 if let target = tmuxTarget {
                     let parts = sendKey.components(separatedBy: " ")
                     for part in parts {
                         TMuxBridge.sendKeys(target: target, command: part)
-                        if parts.count > 1 { Thread.sleep(forTimeInterval: 0.1) }
+                        if parts.count > 1 { try? await Task.sleep(for: .seconds(0.1)) }
                     }
                 } else if let tty = tty {
                     Self.writeToTTY(tty: tty, text: sendKey + "\n")

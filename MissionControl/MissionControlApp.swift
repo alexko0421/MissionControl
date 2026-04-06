@@ -129,14 +129,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.image = makeMImage()
             button.imageScaling = .scaleProportionallyDown
             button.toolTip = "MissionControl"
-        }
-        
+            
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "显示主面板 (Show)", action: #selector(showDashboard), keyEquivalent: "m"))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "退出 (Quit)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         
         statusItem?.menu = menu
+        }
     }
 
     @objc private func showDashboard() {

@@ -10,18 +10,27 @@ struct StatusDot: View {
         ZStack {
             if status.hasPulse {
                 Circle()
-                    .fill(status.color.opacity(0.3))
-                    .frame(width: 12, height: 12)
+                    .fill(status.color.opacity(0.4))
+                    .frame(width: 14, height: 14)
                     .scaleEffect(pulse ? 1.8 : 1.0)
-                    .opacity(pulse ? 0 : 0.6)
-                    .animation(.easeOut(duration: 1.4).repeatForever(autoreverses: false), value: pulse)
+                    .opacity(pulse ? 0 : 0.7)
+                    .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: false), value: pulse)
             }
+            
             Circle()
                 .fill(status.color)
-                .frame(width: 6, height: 6)
+                .frame(width: 7, height: 7)
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                )
         }
-        .frame(width: 12, height: 12)
-        .onAppear { if status.hasPulse { pulse = true } }
+        .frame(width: 14, height: 14)
+        .onAppear { 
+            if status.hasPulse {
+                withAnimation { pulse = true }
+            }
+        }
     }
 }
 
